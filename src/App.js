@@ -425,6 +425,11 @@ const WebRTCComponent = () => {
 			<div
 				style={{ width: "25%", borderRight: "1px solid gray", padding: "10px" }}
 			>
+				<div className="flex">
+					<div>333</div>
+					<div>333</div>
+					<div>333</div>
+				</div>
 				<h3>Active Users</h3>
 				<ul>
 					{activeUsers
