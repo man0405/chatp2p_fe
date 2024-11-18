@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Button } from "./components/ui/button";
-import { Search } from "lucide-react";
 
 const WebRTCComponent = () => {
   const [email, setEmail] = useState("");
@@ -427,28 +425,6 @@ const WebRTCComponent = () => {
       <div
         style={{ width: "25%", borderRight: "1px solid gray", padding: "10px" }}
       >
-        <div>
-          <div className="flex p-4">
-            {/* Title and New Chat Icon */}
-            <div className="flex justify-between mb-4">
-              <div>
-                <h1 className="text-xl font-bold w-full">Chats</h1>
-              </div>
-              <div>
-                <Button>
-                  <Search />
-                </Button>
-              </div>
-            </div>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search"
-                className="w-full px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-              />
-            </div>
-          </div>
-        </div>
         <h3>Active Users</h3>
         <ul>
           {activeUsers
