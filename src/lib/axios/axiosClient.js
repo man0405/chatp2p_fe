@@ -5,8 +5,8 @@ import tokenService from "@/services/token.service";
 const axiosClient = axios.create({
 	baseURL: process.env.SERVER_URL,
 	headers: {
-		// "Content-Type": "application/json",
-		"content-type": "multipart/form-data",
+		"Content-Type": "application/json",
+		// "content-type": "multipart/form-data",
 	},
 	paramsSerializer: {
 		serialize: (params) => {

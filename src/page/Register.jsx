@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 import {
 	InputOTP,
@@ -11,40 +13,155 @@ import {
 	InputOTPSlot,
 	InputOTPSeparator,
 } from "@/components/ui/input-otp";
-import { verifyEmail } from "@/api/authentication/registerAPI";
 
+import {
+	verifyEmail,
+	signup,
+	verifyCode,
+} from "@/api/authentication/registerAPI";
+import { generateAndStoreKeys } from "@/utils/rsa";
 export default function Register() {
+	const navigate = useNavigate();
 	const [step, setStep] = useState(1);
+	const [isLoading, setIsLoading] = useState(false);
 	const [formData, setFormData] = useState({
 		email: "",
 		password: "",
 		confirmPassword: "",
-		name: "",
+		firstName: "",
+		lastName: "",
 		phone: "",
-		verificationCode: "",
 	});
 	const [otp, setOtp] = React.useState("");
-	console.log("Register ~ otp:", process.env.SERVER_URL);
+	const [errors, setErrors] = React.useState({
+		email: "",
+		password: "",
+		confirmPassword: "",
+		firstName: "",
+		lastName: "",
+		phone: "",
+		verifyCode: "",
+	});
+
+	const validateStep = () => {
+		let isValid = true;
+		const newErrors = { ...errors };
+
+		if (step === 1) {
+			// Email validation
+			if (!formData.email) {
+				newErrors.email = "Email is required";
+				isValid = false;
+			} else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+				newErrors.email = "Email is invalid";
+				isValid = false;
+			}
+
+			// Password validation
+			if (!formData.password) {
+				newErrors.password = "Password is required";
+				isValid = false;
+			} else if (formData.password.length < 6) {
+				newErrors.password = "Password must be at least 6 characters";
+				isValid = false;
+			}
+
+			// Confirm password validation
+			if (formData.password !== formData.confirmPassword) {
+				newErrors.confirmPassword = "Passwords do not match";
+				isValid = false;
+			}
+		}
+
+		if (step === 2) {
+			if (!formData.firstName) {
+				newErrors.name = "First name is required";
+				isValid = false;
+			}
+			if (!formData.lastName) {
+				newErrors.name = "Last name is required";
+				isValid = false;
+			}
+
+			if (!formData.phone) {
+				newErrors.phone = "Phone number is required";
+				isValid = false;
+			}
+		}
+
+		setErrors(newErrors);
+		return isValid;
+	};
 
 	const updateFormData = (field, value) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 	};
 
-	const verifyEmailHandler = async () => {
-		try {
-			await verifyEmail(formData.email);
-			handleNext();
-		} catch (error) {
-			console.error(error);
-		}
-	};
-
 	const handleNext = () => {
+		if (!validateStep()) return;
 		setStep((prev) => Math.min(prev + 1, 3));
 	};
 
 	const handleBack = () => {
 		setStep((prev) => Math.max(prev - 1, 1));
+	};
+
+	const verifyEmailHandler = async () => {
+		if (!validateStep()) return;
+		try {
+			setIsLoading(true);
+			const result = await verifyEmail(formData.email);
+			if (result.success) {
+				handleNext();
+			} else {
+				setErrors((e) => ({ ...e, email: result.message }));
+			}
+		} catch (error) {
+			console.error(error);
+		}
+		setIsLoading(false);
+	};
+
+	const registerHandler = async () => {
+		if (!validateStep()) return;
+		try {
+			setIsLoading(true);
+			const keyPair = await generateAndStoreKeys();
+			const result = await signup(
+				formData.email,
+				formData.password,
+				formData.phone,
+				formData.firstName,
+				formData.lastName,
+				keyPair.publicKey
+			);
+			if (result.success) {
+				handleNext();
+			} else {
+				setErrors((e) => ({ ...e, email: result.message }));
+			}
+		} catch (error) {
+			console.error(error);
+		}
+		setIsLoading(false);
+	};
+
+	const verifyCodeHandler = async () => {
+		try {
+			setIsLoading(true);
+			const result = await verifyCode(formData.email, otp);
+
+			if (result.success) {
+				// Redirect to login page
+				console.log("Registration complete");
+				navigate("/auth/login");
+			} else {
+				setErrors((e) => ({ ...e, verifyCode: result.data }));
+			}
+		} catch (error) {
+			console.error(error);
+		}
+		setIsLoading(false);
 	};
 
 	return (
@@ -125,7 +242,11 @@ export default function Register() {
 											type="email"
 											value={formData.email}
 											onChange={(e) => updateFormData("email", e.target.value)}
+											className={errors.email ? "border-red-500" : ""}
 										/>
+										{errors.email && (
+											<p className="text-sm text-red-500">{errors.email}</p>
+										)}
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="password">Password</Label>
@@ -136,7 +257,11 @@ export default function Register() {
 											onChange={(e) =>
 												updateFormData("password", e.target.value)
 											}
+											className={errors.password ? "border-red-500" : ""}
 										/>
+										{errors.password && (
+											<p className="text-sm text-red-500">{errors.password}</p>
+										)}
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -147,72 +272,162 @@ export default function Register() {
 											onChange={(e) =>
 												updateFormData("confirmPassword", e.target.value)
 											}
+											className={errors.confirmPassword ? "border-red-500" : ""}
 										/>
+										{errors.confirmPassword && (
+											<p className="text-sm text-red-500">
+												{errors.confirmPassword}
+											</p>
+										)}
 									</div>
 								</div>
 								<div className="flex gap-4">
-									<Button onClick={verifyEmailHandler} className="w-full">
-										Continue
+									<Button
+										onClick={verifyEmailHandler}
+										className="w-full"
+										disabled={isLoading}
+									>
+										{isLoading ? (
+											<Loader2 className="animate-spin" />
+										) : (
+											"Continue "
+										)}
 									</Button>
 								</div>
 							</>
 						)}
 
 						{step === 2 && (
-							<div className="space-y-4">
-								<div className="space-y-2">
-									<Label htmlFor="name">Full Name</Label>
-									<Input
-										id="name"
-										placeholder="John Doe"
-										value={formData.name}
-										onChange={(e) => updateFormData("name", e.target.value)}
-									/>
+							<>
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="firstName">First Name</Label>
+										<Input
+											id="firstName"
+											placeholder="John"
+											value={formData.firstName}
+											onChange={(e) =>
+												updateFormData("firstName", e.target.value)
+											}
+											className={errors.firstName ? "border-red-500" : ""}
+										/>
+										{errors.firstName && (
+											<p className="text-sm text-red-500">{errors.firstName}</p>
+										)}
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="lastName">Last Name</Label>
+										<Input
+											id="lastName"
+											placeholder="Doe"
+											value={formData.lastName}
+											onChange={(e) =>
+												updateFormData("lastName", e.target.value)
+											}
+											className={errors.lastName ? "border-red-500" : ""}
+										/>
+										{errors.lastName && (
+											<p className="text-sm text-red-500">{errors.lastName}</p>
+										)}
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="phone">Phone Number</Label>
+										<Input
+											id="phone"
+											placeholder="+1 (555) 000-0000"
+											type="tel"
+											value={formData.phone}
+											onChange={(e) => updateFormData("phone", e.target.value)}
+											className={errors.phone ? "border-red-500" : ""}
+										/>
+										{errors.phone && (
+											<p className="text-sm text-red-500">{errors.phone}</p>
+										)}
+									</div>
 								</div>
-								<div className="space-y-2">
-									<Label htmlFor="phone">Phone Number</Label>
-									<Input
-										id="phone"
-										placeholder="+1 (555) 000-0000"
-										type="tel"
-										value={formData.phone}
-										onChange={(e) => updateFormData("phone", e.target.value)}
-									/>
+								<div className="flex gap-4">
+									<Button
+										onClick={registerHandler}
+										className="w-full"
+										disabled={isLoading}
+									>
+										{isLoading ? (
+											<Loader2 className="animate-spin" />
+										) : (
+											"Continue "
+										)}
+									</Button>
 								</div>
-							</div>
+							</>
 						)}
 
 						{step === 3 && (
-							<div className="space-y-4">
-								<div className="space-y-2">
-									<Label htmlFor="otp">Enter OTP</Label>
-									<InputOTP
-										maxLength={6}
-										pattern={REGEXP_ONLY_DIGITS}
-										value={otp}
-										onChange={(value) => setOtp(value)}
-									>
-										<InputOTPGroup>
-											<InputOTPSlot index={0} />
-											<InputOTPSlot index={1} />
-										</InputOTPGroup>
-										<InputOTPSeparator />
-										<InputOTPGroup>
-											<InputOTPSlot index={2} />
-											<InputOTPSlot index={3} />
-										</InputOTPGroup>
-										<InputOTPSeparator />
+							<>
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="otp">Enter OTP</Label>
+										<InputOTP
+											maxLength={6}
+											pattern={REGEXP_ONLY_DIGITS}
+											value={otp}
+											onChange={(value) => setOtp(value)}
+										>
+											<InputOTPGroup>
+												<InputOTPSlot
+													index={0}
+													className={errors.verifyCode ? "border-red-500" : ""}
+												/>
+												<InputOTPSlot
+													index={1}
+													className={errors.verifyCode ? "border-red-500" : ""}
+												/>
+											</InputOTPGroup>
+											<InputOTPSeparator />
+											<InputOTPGroup>
+												<InputOTPSlot
+													index={2}
+													className={errors.verifyCode ? "border-red-500" : ""}
+												/>
+												<InputOTPSlot
+													index={3}
+													className={errors.verifyCode ? "border-red-500" : ""}
+												/>
+											</InputOTPGroup>
+											<InputOTPSeparator />
 
-										<InputOTPGroup>
-											<InputOTPSlot index={4} />
-											<InputOTPSlot index={5} />
-										</InputOTPGroup>
-									</InputOTP>
+											<InputOTPGroup>
+												<InputOTPSlot
+													index={4}
+													className={errors.verifyCode ? "border-red-500" : ""}
+												/>
+												<InputOTPSlot
+													index={5}
+													className={errors.verifyCode ? "border-red-500" : ""}
+												/>
+											</InputOTPGroup>
+										</InputOTP>
+									</div>
+									{errors.verifyCode && (
+										<p className="text-sm text-red-500">{errors.verifyCode}</p>
+									)}
+									<p className="text-sm text-muted-foreground">
+										We sent a 6-digit OTP to {formData.email}
+									</p>
 								</div>
-								<p className="text-sm text-muted-foreground">
-									We sent a 6-digit OTP to {formData.email}
-								</p>
-							</div>
+								<div className="flex gap-4">
+									<Button
+										onClick={verifyCodeHandler}
+										className="w-full"
+										disabled={isLoading}
+									>
+										{isLoading ? (
+											<Loader2 className="animate-spin" />
+										) : (
+											"Complete Registration"
+										)}
+									</Button>
+								</div>
+							</>
 						)}
 
 						<div className="flex gap-4">
