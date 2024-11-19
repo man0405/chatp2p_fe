@@ -22,6 +22,8 @@ import {
   ThumbsUp,
   Video,
 } from "lucide-react";
+import AddFriendModal from "@/components/Chat/AddFriendModal";
+import ChatHeader from "./components/Chat/ChatHeader";
 
 const WebRTCComponent = () => {
   const [email, setEmail] = useState("");
@@ -34,6 +36,7 @@ const WebRTCComponent = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
   const [message, setMessage] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const clientRef = useRef(null);
   const peerConnections = useRef(new Map()).current;
@@ -492,7 +495,7 @@ const WebRTCComponent = () => {
           </div>
         </div>
       </div>
-
+      <AddFriendModal isOpen={isModalOpen} setIsOpen={setIsModalOpen} />
       {/* Main Content */}
       <div className="flex-1 grid" style={{ gridTemplateColumns: "360px 1fr" }}>
         {/* Left Sidebar */}
@@ -504,6 +507,7 @@ const WebRTCComponent = () => {
                 variant="ghost"
                 size="icon"
                 className="text-zinc-400 hover:text-white"
+                onClick={() => setIsModalOpen(true)}
               >
                 <MessageCircle className="w-5 h-5" />
               </Button>
