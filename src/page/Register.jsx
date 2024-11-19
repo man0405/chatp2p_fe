@@ -3,26 +3,52 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+
+import {
+	InputOTP,
+	InputOTPGroup,
+	InputOTPSlot,
+	InputOTPSeparator,
+} from "@/components/ui/input-otp";
+import { verifyEmail } from "@/api/authentication/registerAPI";
 
 export default function Register() {
+	const [step, setStep] = useState(1);
 	const [formData, setFormData] = useState({
 		email: "",
 		password: "",
 		confirmPassword: "",
+		name: "",
+		phone: "",
+		verificationCode: "",
 	});
-	const [error, setError] = useState("");
+	const [otp, setOtp] = React.useState("");
+	console.log("Register ~ otp:", process.env.SERVER_URL);
 
-	const handleSubmit = (e) => {
-		e.preventDefault();
-		if (formData.password !== formData.confirmPassword) {
-			setError("Passwords do not match");
-			return;
+	const updateFormData = (field, value) => {
+		setFormData((prev) => ({ ...prev, [field]: value }));
+	};
+
+	const verifyEmailHandler = async () => {
+		try {
+			await verifyEmail(formData.email);
+			handleNext();
+		} catch (error) {
+			console.error(error);
 		}
-		// Handle registration logic here
+	};
+
+	const handleNext = () => {
+		setStep((prev) => Math.min(prev + 1, 3));
+	};
+
+	const handleBack = () => {
+		setStep((prev) => Math.max(prev - 1, 1));
 	};
 
 	return (
-		<div className="grid min-h-screen w-full grid-cols-1 lg:grid-cols-2">
+		<div className="grid min-h-screen lg:grid-cols-2">
 			<div className="hidden lg:block bg-zinc-900 relative">
 				<div className="relative z-20 flex h-full flex-col justify-between p-10 text-white">
 					<div className="flex items-center text-lg font-medium">
@@ -50,82 +76,178 @@ export default function Register() {
 					</blockquote>
 				</div>
 			</div>
-			<div className="flex items-center justify-center p-6 lg:p-10">
-				<div className="mx-auto w-full max-w-[400px] space-y-6">
-					<div className="flex flex-col space-y-2 text-center">
-						<h1 className="text-2xl font-semibold tracking-tight">
-							Create an account
-						</h1>
-						<p className="text-sm text-muted-foreground">
-							Enter your details to create your account
+			<div className="flex items-center justify-center p-8">
+				<div className="mx-auto w-full max-w-md space-y-8">
+					<div className="space-y-2 text-center">
+						<h1 className="text-3xl font-bold">Create an account</h1>
+						<p className="text-muted-foreground">
+							Complete the steps below to create your account
 						</p>
 					</div>
-					<form onSubmit={handleSubmit} className="space-y-4">
-						<div className="space-y-2">
-							<Label htmlFor="email">Email</Label>
-							<Input
-								id="email"
-								type="email"
-								placeholder="m@example.com"
-								required
-								onChange={(e) =>
-									setFormData({ ...formData, email: e.target.value })
-								}
-							/>
+
+					<div className="space-y-4">
+						<div className="flex justify-between text-sm">
+							{[1, 2, 3].map((number) => (
+								<div
+									key={number}
+									className={`flex items-center gap-2 ${
+										step >= number ? "text-primary" : "text-muted-foreground"
+									}`}
+								>
+									<div
+										className={`flex h-8 w-8 items-center justify-center rounded-full ${
+											step >= number
+												? "bg-primary text-primary-foreground"
+												: "bg-muted"
+										}`}
+									>
+										{number}
+									</div>
+									<span className="hidden sm:inline">
+										{number === 1
+											? "Account"
+											: number === 2
+											? "Personal"
+											: "Verify"}
+									</span>
+								</div>
+							))}
 						</div>
-						<div className="space-y-2">
-							<Label htmlFor="password">Password</Label>
-							<Input
-								id="password"
-								type="password"
-								required
-								onChange={(e) =>
-									setFormData({ ...formData, password: e.target.value })
-								}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="confirmPassword">Confirm Password</Label>
-							<Input
-								id="confirmPassword"
-								type="password"
-								required
-								onChange={(e) =>
-									setFormData({ ...formData, confirmPassword: e.target.value })
-								}
-							/>
-						</div>
-						{error && (
-							<p className="text-sm text-red-500 text-center">{error}</p>
+
+						{step === 1 && (
+							<>
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="email">Email</Label>
+										<Input
+											id="email"
+											placeholder="m@example.com"
+											type="email"
+											value={formData.email}
+											onChange={(e) => updateFormData("email", e.target.value)}
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="password">Password</Label>
+										<Input
+											id="password"
+											type="password"
+											value={formData.password}
+											onChange={(e) =>
+												updateFormData("password", e.target.value)
+											}
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="confirmPassword">Confirm Password</Label>
+										<Input
+											id="confirmPassword"
+											type="password"
+											value={formData.confirmPassword}
+											onChange={(e) =>
+												updateFormData("confirmPassword", e.target.value)
+											}
+										/>
+									</div>
+								</div>
+								<div className="flex gap-4">
+									<Button onClick={verifyEmailHandler} className="w-full">
+										Continue
+									</Button>
+								</div>
+							</>
 						)}
-						<Button type="submit" className="w-full">
-							Create Account
-						</Button>
-					</form>
-					<div className="text-center">
-						<Link
-							to="/auth/login"
-							className="text-sm text-muted-foreground hover:text-primary underline"
-						>
-							Already have an account? Sign in
-						</Link>
+
+						{step === 2 && (
+							<div className="space-y-4">
+								<div className="space-y-2">
+									<Label htmlFor="name">Full Name</Label>
+									<Input
+										id="name"
+										placeholder="John Doe"
+										value={formData.name}
+										onChange={(e) => updateFormData("name", e.target.value)}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="phone">Phone Number</Label>
+									<Input
+										id="phone"
+										placeholder="+1 (555) 000-0000"
+										type="tel"
+										value={formData.phone}
+										onChange={(e) => updateFormData("phone", e.target.value)}
+									/>
+								</div>
+							</div>
+						)}
+
+						{step === 3 && (
+							<div className="space-y-4">
+								<div className="space-y-2">
+									<Label htmlFor="otp">Enter OTP</Label>
+									<InputOTP
+										maxLength={6}
+										pattern={REGEXP_ONLY_DIGITS}
+										value={otp}
+										onChange={(value) => setOtp(value)}
+									>
+										<InputOTPGroup>
+											<InputOTPSlot index={0} />
+											<InputOTPSlot index={1} />
+										</InputOTPGroup>
+										<InputOTPSeparator />
+										<InputOTPGroup>
+											<InputOTPSlot index={2} />
+											<InputOTPSlot index={3} />
+										</InputOTPGroup>
+										<InputOTPSeparator />
+
+										<InputOTPGroup>
+											<InputOTPSlot index={4} />
+											<InputOTPSlot index={5} />
+										</InputOTPGroup>
+									</InputOTP>
+								</div>
+								<p className="text-sm text-muted-foreground">
+									We sent a 6-digit OTP to {formData.email}
+								</p>
+							</div>
+						)}
+
+						<div className="flex gap-4">
+							{step > 1 && (
+								<Button
+									variant="outline"
+									onClick={handleBack}
+									className="w-full"
+								>
+									Back
+								</Button>
+							)}
+							{/* <Button onClick={handleNext} className="w-full">
+								{step === 3 ? "Complete" : "Continue"}
+							</Button> */}
+						</div>
+
+						<p className="text-center text-sm text-muted-foreground">
+							Already have an account?{" "}
+							<Link href="/sign-in" className="underline">
+								Sign in
+							</Link>
+						</p>
+
+						<p className="text-center text-xs text-muted-foreground">
+							By clicking continue, you agree to our{" "}
+							<Link href="/terms" className="underline">
+								Terms of Service
+							</Link>{" "}
+							and{" "}
+							<Link href="/privacy" className="underline">
+								Privacy Policy
+							</Link>
+						</p>
 					</div>
-					<p className="px-8 text-center text-sm text-muted-foreground">
-						By clicking continue, you agree to our{" "}
-						<Link
-							to="/terms"
-							className="underline underline-offset-4 hover:text-primary"
-						>
-							Terms of Service
-						</Link>{" "}
-						and{" "}
-						<Link
-							to="/privacy"
-							className="underline underline-offset-4 hover:text-primary"
-						>
-							Privacy Policy
-						</Link>
-					</p>
 				</div>
 			</div>
 		</div>
