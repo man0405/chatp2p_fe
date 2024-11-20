@@ -2,8 +2,78 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { login } from "@/api/authentication/login";
+import { setToken } from "@/services/token.service";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
-export default function Component() {
+export default function LoginPage() {
+	const navigate = useNavigate();
+
+	const [formData, setFormData] = useState({
+		email: "",
+		password: "",
+	});
+	const [errors, setErrors] = useState({
+		email: "",
+		password: "",
+	});
+	const [isLoading, setIsLoading] = useState(false);
+
+	const updateFormData = (field, value) => {
+		setFormData({
+			...formData,
+			[field]: value,
+		});
+	};
+
+	const validateForm = () => {
+		let isValid = true;
+		const newErrors = { ...errors };
+		console.log("validateForm ~ newErrors:", newErrors);
+		if (!formData.email) {
+			newErrors.email = "Email is required";
+			isValid = false;
+		} else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+			newErrors.email = "Email is invalid";
+			isValid = false;
+		}
+
+		if (!formData.password) {
+			newErrors.password = "Password is required";
+			isValid = false;
+		}
+		setErrors(newErrors);
+		return isValid;
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		setIsLoading(true);
+		if (!validateForm()) {
+			setIsLoading(false);
+			return;
+		}
+		try {
+			const response = await login(formData.email, formData.password);
+			if (response.success) {
+				setToken(response.data);
+				console.log("handleSubmit ~ response:", response);
+				navigate("/");
+				return;
+			}
+		} catch (error) {
+			console.error(error);
+			setErrors({
+				email: "An error occurred",
+				password: "An error occurred",
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
 	return (
 		<div className="grid min-h-screen w-full grid-cols-1 lg:grid-cols-2">
 			<div className="hidden lg:block bg-zinc-900 relative">
@@ -49,7 +119,14 @@ export default function Component() {
 								type="email"
 								placeholder="m@example.com"
 								required
+								onChange={(e) => updateFormData("email", e.target.value)}
+								name="email"
+								value={formData.email}
+								className={errors.email ? "border-red-500" : ""}
 							/>
+							{errors.email && (
+								<p className="text-red-500 text-sm">{errors.email}</p>
+							)}
 						</div>
 						<div className="space-y-2">
 							<div className="flex items-center justify-between">
@@ -58,10 +135,23 @@ export default function Component() {
 									Forgot password?
 								</Link>
 							</div>
-							<Input id="password" type="password" required />
+							<Input
+								id="password"
+								type="password"
+								required
+								onChange={(e) => updateFormData("password", e.target.value)}
+								className={errors.password ? "border-red-500" : ""}
+							/>
+							{errors.password && (
+								<p className="text-red-500 text-sm">{errors.password}</p>
+							)}
 						</div>
-						<Button type="submit" className="w-full">
-							Sign in
+						<Button
+							onClick={handleSubmit}
+							className="w-full"
+							disabled={isLoading}
+						>
+							{isLoading ? <Loader2 className="animate-spin" /> : "Sign In "}
 						</Button>
 					</form>
 					<p className="text-center text-sm text-gray-500 dark:text-gray-400">

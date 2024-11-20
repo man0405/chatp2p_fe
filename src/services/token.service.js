@@ -1,18 +1,13 @@
-const getToken = () => {
+export const getToken = () => {
 	return localStorage.getItem("token");
 };
 
-const setToken = (token) => {
+export const setToken = (token) => {
+	console.log("setToken ~ token:", token);
+
 	localStorage.setItem("token", token);
 };
 
-const removeToken = () => {
+export const removeToken = () => {
 	localStorage.removeItem("token");
-};
-
-// eslint-disable-next-line import/no-anonymous-default-export
-export default {
-	getToken,
-	setToken,
-	removeToken,
 };

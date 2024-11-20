@@ -1,6 +1,6 @@
 import axios from "axios";
 import qs from "qs";
-import tokenService from "@/services/token.service";
+import { getToken } from "@/services/token.service";
 
 const axiosClient = axios.create({
 	baseURL: process.env.SERVER_URL,
@@ -16,7 +16,7 @@ const axiosClient = axios.create({
 });
 axios.interceptors.request.use(
 	(config) => {
-		const token = tokenService.getToken();
+		const token = getToken();
 		if (token) {
 			config.headers["Authorization"] = "Bearer " + token;
 		}

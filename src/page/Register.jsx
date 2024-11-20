@@ -20,7 +20,7 @@ import {
 	verifyCode,
 } from "@/api/authentication/registerAPI";
 import { generateAndStoreKeys } from "@/utils/rsa";
-export default function Register() {
+export default function RegisterPage() {
 	const navigate = useNavigate();
 	const [step, setStep] = useState(1);
 	const [isLoading, setIsLoading] = useState(false);
@@ -114,7 +114,7 @@ export default function Register() {
 			if (result.success) {
 				handleNext();
 			} else {
-				setErrors((e) => ({ ...e, email: result.message }));
+				setErrors((e) => ({ ...e, email: result.data }));
 			}
 		} catch (error) {
 			console.error(error);
@@ -138,7 +138,7 @@ export default function Register() {
 			if (result.success) {
 				handleNext();
 			} else {
-				setErrors((e) => ({ ...e, email: result.message }));
+				setErrors((e) => ({ ...e, email: result.data }));
 			}
 		} catch (error) {
 			console.error(error);
