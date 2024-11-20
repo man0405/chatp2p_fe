@@ -2,16 +2,16 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import axiosClient from "@/lib/axios/axiosClient"; // Import axiosClient
 
 export default function AddFriendModal({ isOpen, setIsOpen }) {
   const [gmail, setGmail] = useState(""); // State to store email input
   const [friendSuggestions, setFriendSuggestions] = useState([]); // State for friend suggestions
   const [isUndefined, setUndefined] = useState(false);
-  const [isTriggered, setTriggered] = useState(false); // State to check if the button is clicked
+  const [isTriggered, setTriggered] = useState(false);
+  const [status, setStatus] = useState("");
   const jwtToken =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ2YW5tYW4xNjA1MDRAZ21haWwuY29tIiwiaWF0IjoxNzMyMDY5MjEzLCJleHAiOjE3MzIwNzI4MTN9.IwxRgRrH1ffh8QBL5-7gp6BYWLfVexlfjd7xqSm3c3E"; // Replace this with your actual JWT token or fetch it dynamically
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ2YW5tYW4xNjA1MDRAZ21haWwuY29tIiwiaWF0IjoxNzMyMDg4MDU2LCJleHAiOjE3MzIwOTE2NTZ9.DJTfcUXHpe_8bYT4py5nTcyZ3FB1-wkv5DhvGBrzwN4"; // Replace this with your actual JWT token or fetch it dynamically
 
   // Function to fetch friend data
   const fetchFriendSuggestions = async () => {
@@ -49,6 +49,9 @@ export default function AddFriendModal({ isOpen, setIsOpen }) {
           },
         }
       );
+      if (response.status === 200) {
+        setStatus("Pending s");
+      }
       console.log("Friend request sent successfully:", response);
       return response; // Return the response for further handling
     } catch (error) {
@@ -84,19 +87,20 @@ export default function AddFriendModal({ isOpen, setIsOpen }) {
   };
 
   const renderFriendAction = (status) => {
-    if (status === "Pending s") {
+    setStatus(status);
+    if (this.status === "Pending s") {
       return (
         <Button variant="warning" disabled>
           Sent request
         </Button>
       );
-    } else if (status === "Pending r") {
+    } else if (this.status === "Pending r") {
       return (
         <Button variant="secondary" onClick={acceptFriendRequest}>
           Accept
         </Button>
       );
-    } else if (status === "Already") {
+    } else if (this.status === "Already") {
       return (
         <Button variant="secondary" disabled>
           Friends
@@ -149,7 +153,7 @@ export default function AddFriendModal({ isOpen, setIsOpen }) {
                       <p className="text-gray-600 text-sm">{friend.phone}</p>
                     </div>
                   </div>
-                  {renderFriendAction(friend.status)}
+                  {renderFriendAction}
                 </div>
               ))
             : isTriggered &&
