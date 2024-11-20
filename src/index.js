@@ -4,6 +4,8 @@ import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
 import Test from "./page/test";
+import Login from "./page/Login";
+import Register from "./page/Register";
 
 const router = createBrowserRouter([
 	{
@@ -13,6 +15,14 @@ const router = createBrowserRouter([
 	{
 		path: "/test",
 		element: <Test />,
+	},
+	{
+		path: "/auth/login",
+		element: <Login />,
+	},
+	{
+		path: "/auth/register",
+		element: <Register />,
 	},
 ]);
 const root = ReactDOM.createRoot(document.getElementById("root"));
