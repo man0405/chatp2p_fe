@@ -19,6 +19,13 @@ const WebRTCComponent = () => {
   const dataChannels = useRef(new Map()).current;
   const iceCandidatesQueue = useRef(new Map()).current;
 
+  const iceServers = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    // Add TURN servers here if necessary
+  ];
+
   // Ref to store the latest username
   const usernameRef = useRef("");
 
@@ -101,13 +108,6 @@ const WebRTCComponent = () => {
       console.warn(`Already connected to ${targetUser}`);
       return;
     }
-
-    const iceServers = [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      // Add TURN servers here if necessary
-    ];
 
     const newPeerConnection = new RTCPeerConnection({ iceServers });
     peerConnections.set(targetUser, newPeerConnection);
@@ -197,13 +197,6 @@ const WebRTCComponent = () => {
       console.log(`Received offer from ${sender}:`, offer);
 
       if (!peerConnections.has(sender)) {
-        const iceServers = [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun1.l.google.com:19302" },
-          { urls: "stun:stun2.l.google.com:19302" },
-          // Add TURN servers here if necessary
-        ];
-
         const newPeerConnection = new RTCPeerConnection({ iceServers });
         peerConnections.set(sender, newPeerConnection);
 
@@ -262,6 +255,52 @@ const WebRTCComponent = () => {
       sendAnswer(answer, sender);
     } catch (error) {
       console.error("Error in handleReceivedOffer:", error);
+    }
+  };
+
+  const startCall = async (targetUser) => {
+    if (peerConnections.has(targetUser)) {
+      console.warn(`Already connected to ${targetUser}`);
+      return;
+    }
+
+    const newPeerConnection = new RTCPeerConnection({ iceServers });
+    peerConnections.set(targetUser, newPeerConnection);
+
+    try {
+      // Capture local media (audio + video)
+      const localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      // Add local tracks to the connection
+      localStream.getTracks().forEach((track) => {
+        newPeerConnection.addTrack(track, localStream);
+      });
+
+      // Display the local video
+      document.getElementById("localVideo").srcObject = localStream;
+
+      // Event: Handle remote tracks
+      newPeerConnection.ontrack = (event) => {
+        console.log("Received remote stream");
+        document.getElementById("remoteVideo").srcObject = event.streams[0];
+      };
+
+      // ICE candidate handling
+      newPeerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          sendCandidate(event.candidate, targetUser);
+        }
+      };
+
+      // Create offer and set local description
+      const offer = await newPeerConnection.createOffer();
+      await newPeerConnection.setLocalDescription(offer);
+      sendOffer(offer, targetUser);
+    } catch (error) {
+      console.error("Error starting call:", error);
     }
   };
 
