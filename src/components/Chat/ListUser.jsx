@@ -6,7 +6,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ActiveUser from "./ActiveUser";
 
-export default function ListUser({ users, selectedUser, setSelectedUser }) {
+export default function ListUser({
+	users,
+	selectedUser,
+	setSelectedUser,
+	activeUsers,
+}) {
+	console.log("activeUser in list user :", activeUsers);
 	return (
 		<div className="bg-zinc-900 border-r border-zinc-800 h-screen overflow-hidden flex flex-col ">
 			<div className="p-4 border-zinc-800">
@@ -28,7 +34,7 @@ export default function ListUser({ users, selectedUser, setSelectedUser }) {
 					/>
 				</div>
 			</div>
-			<ActiveUser />
+			<ActiveUser activeUsers={activeUsers} />
 			<ScrollArea className=" p-4">
 				{users.map((user, index) => (
 					<div

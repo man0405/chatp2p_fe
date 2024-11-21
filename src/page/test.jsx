@@ -10,6 +10,84 @@ import { ChatArea } from "@/components/Chat/ChatArea";
 import ChatHeader from "@/components/Chat/ChatHeader";
 import { getToken } from "@/services/token.service";
 
+const users = [
+	{
+		name: "mit uốt",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Chức NỮ",
+		status: "Last seen 5m ago",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Vincom",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "BCS-22GIT2",
+		status: "Last seen 1h ago",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Khẩu nghiệp",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "mit uốt",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Chức NỮ",
+		status: "Last seen 5m ago",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Vincom",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "BCS-22GIT2",
+		status: "Last seen 1h ago",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Khẩu nghiệp",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "mit uốt",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Chức NỮ",
+		status: "Last seen 5m ago",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Vincom",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "BCS-22GIT2",
+		status: "Last seen 1h ago",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+	{
+		name: "Khẩu nghiệp",
+		status: "Active now",
+		avatar: "/placeholder.svg?height=40&width=40",
+	},
+];
+
 export default function Component() {
 	const [message, setMessage] = useState("");
 	const [selectedUser, setSelectedUser] = useState(0);
@@ -18,83 +96,6 @@ export default function Component() {
 		{ text: "Hello!", isSent: false },
 		{ text: "Hi there!", isSent: true },
 	]);
-	const users = [
-		{
-			name: "mit uốt",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Chức NỮ",
-			status: "Last seen 5m ago",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Vincom",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "BCS-22GIT2",
-			status: "Last seen 1h ago",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Khẩu nghiệp",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "mit uốt",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Chức NỮ",
-			status: "Last seen 5m ago",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Vincom",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "BCS-22GIT2",
-			status: "Last seen 1h ago",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Khẩu nghiệp",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "mit uốt",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Chức NỮ",
-			status: "Last seen 5m ago",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Vincom",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "BCS-22GIT2",
-			status: "Last seen 1h ago",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-		{
-			name: "Khẩu nghiệp",
-			status: "Active now",
-			avatar: "/placeholder.svg?height=40&width=40",
-		},
-	];
 
 	const sidebarItems = [
 		{ icon: Grid, label: "Dashboard" },
@@ -121,6 +122,10 @@ export default function Component() {
 		connectToSignalingServer();
 	}, []);
 
+	useEffect(() => {
+		console.log("ActiveUsers state:", activeUsers);
+	}, [activeUsers]);
+
 	const connectToSignalingServer = () => {
 		const token = getToken();
 		const username = localStorage.getItem("username");
@@ -138,7 +143,16 @@ export default function Component() {
 				setIsConnected(true);
 
 				client.subscribe("/topic/users", (message) => {
-					setActiveUsers(JSON.parse(message.body));
+					// setActiveUsers(JSON.parse(message.body));
+				});
+
+				client.subscribe("/user/queue/active-friends", function (message) {
+					const activeFriends = JSON.parse(message.body);
+					console.log("Active friends:", activeFriends); // have data
+					setActiveUsers([...activeFriends]); // it doesnt set data here
+
+					// Update the UI with the active friends
+					// updateActiveFriendsUI(activeFriends);
 				});
 
 				client.publish({
@@ -501,6 +515,7 @@ export default function Component() {
 			<div className="flex-1 grid" style={{ gridTemplateColumns: "360px 1fr" }}>
 				{/* Left Sidebar */}
 				<ListUser
+					activeUsers={activeUsers}
 					users={users}
 					selectedUser={selectedUser}
 					setSelectedUser={setSelectedUser}
