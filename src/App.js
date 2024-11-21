@@ -36,8 +36,9 @@ const WebRTCComponent = () => {
 			});
 
 			if (response.ok) {
-				const token = await response.text();
-				localStorage.setItem("token", token);
+				const token = await response.json();
+				console.log("handleLogin ~ token:", token);
+				localStorage.setItem("token", token.data);
 				setIsAuthenticated(true);
 
 				// Extract the username from email or set it explicitly
@@ -46,7 +47,7 @@ const WebRTCComponent = () => {
 				console.log("Username set to:", extractedUsername); // Logging
 
 				// Connect to signaling server after setting username
-				connectToSignalingServer(token, extractedUsername);
+				connectToSignalingServer(token.data, extractedUsername);
 			} else {
 				console.error("Login failed");
 			}

@@ -59,6 +59,7 @@ export default function LoginPage() {
 			const response = await login(formData.email, formData.password);
 			if (response.success) {
 				setToken(response.data);
+				localStorage.setItem("username", formData.email);
 				console.log("handleSubmit ~ response:", response);
 				navigate("/");
 				return;
