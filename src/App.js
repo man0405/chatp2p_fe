@@ -1,7 +1,30 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Button } from "./components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Archive,
+  Bell,
+  Camera,
+  Grid,
+  Info,
+  MessageCircle,
+  MessagesSquare,
+  Phone,
+  Plus,
+  Search,
+  Send,
+  Smile,
+  ThumbsUp,
+  Video,
+} from "lucide-react";
+import AddFriendModal from "@/components/Chat/AddFriendModal";
+import ChatHeader from "./components/Chat/ChatHeader";
+
 
 const WebRTCComponent = () => {
   const [email, setEmail] = useState("");
@@ -13,11 +36,15 @@ const WebRTCComponent = () => {
   const [newMessage, setNewMessage] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
+  const [message, setMessage] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   const clientRef = useRef(null);
   const peerConnections = useRef(new Map()).current;
   const dataChannels = useRef(new Map()).current;
   const iceCandidatesQueue = useRef(new Map()).current;
+
 
   const iceServers = [
     { urls: "stun:stun.l.google.com:19302" },
@@ -25,7 +52,6 @@ const WebRTCComponent = () => {
     { urls: "stun:stun2.l.google.com:19302" },
     // Add TURN servers here if necessary
   ];
-
   // Ref to store the latest username
   const usernameRef = useRef("");
 
@@ -108,6 +134,7 @@ const WebRTCComponent = () => {
       console.warn(`Already connected to ${targetUser}`);
       return;
     }
+
 
     const newPeerConnection = new RTCPeerConnection({ iceServers });
     peerConnections.set(targetUser, newPeerConnection);
@@ -255,52 +282,6 @@ const WebRTCComponent = () => {
       sendAnswer(answer, sender);
     } catch (error) {
       console.error("Error in handleReceivedOffer:", error);
-    }
-  };
-
-  const startCall = async (targetUser) => {
-    if (peerConnections.has(targetUser)) {
-      console.warn(`Already connected to ${targetUser}`);
-      return;
-    }
-
-    const newPeerConnection = new RTCPeerConnection({ iceServers });
-    peerConnections.set(targetUser, newPeerConnection);
-
-    try {
-      // Capture local media (audio + video)
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-
-      // Add local tracks to the connection
-      localStream.getTracks().forEach((track) => {
-        newPeerConnection.addTrack(track, localStream);
-      });
-
-      // Display the local video
-      document.getElementById("localVideo").srcObject = localStream;
-
-      // Event: Handle remote tracks
-      newPeerConnection.ontrack = (event) => {
-        console.log("Received remote stream");
-        document.getElementById("remoteVideo").srcObject = event.streams[0];
-      };
-
-      // ICE candidate handling
-      newPeerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          sendCandidate(event.candidate, targetUser);
-        }
-      };
-
-      // Create offer and set local description
-      const offer = await newPeerConnection.createOffer();
-      await newPeerConnection.setLocalDescription(offer);
-      sendOffer(offer, targetUser);
-    } catch (error) {
-      console.error("Error starting call:", error);
     }
   };
 
@@ -460,6 +441,7 @@ const WebRTCComponent = () => {
     }
   };
 
+
   const disconnect = () => {
     if (clientRef.current) {
       clientRef.current.publish({
@@ -553,6 +535,7 @@ const WebRTCComponent = () => {
         ) : (
           <p>Select a user to start chatting.</p>
         )}
+
       </div>
     </div>
   );
