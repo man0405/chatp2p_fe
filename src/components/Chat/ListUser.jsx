@@ -4,11 +4,18 @@ import { MessageCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ActiveUser from "./ActiveUser";
 
-export default function ListUser({ users, selectedUser, setSelectedUser }) {
+export default function ListUser({
+	users,
+	selectedUser,
+	setSelectedUser,
+	activeUsers,
+}) {
+	console.log("activeUser in list user :", activeUsers);
 	return (
 		<div className="bg-zinc-900 border-r border-zinc-800 h-screen overflow-hidden flex flex-col ">
-			<div className="p-4 border-b border-zinc-800">
+			<div className="p-4 border-zinc-800">
 				<div className="flex items-center justify-between mb-4">
 					<h1 className="text-xl font-semibold text-white">Chats</h1>
 					<Button
@@ -27,17 +34,18 @@ export default function ListUser({ users, selectedUser, setSelectedUser }) {
 					/>
 				</div>
 			</div>
-			<ScrollArea className="">
+			<ActiveUser activeUsers={activeUsers} />
+			<ScrollArea className=" p-4">
 				{users.map((user, index) => (
 					<div
 						key={index}
-						className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-zinc-800/50 relative ${
+						className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-900 cursor-pointer relative ${
 							selectedUser === index ? "bg-zinc-800" : ""
 						}`}
 						onClick={() => setSelectedUser(index)}
 					>
 						<div className="relative">
-							<Avatar>
+							<Avatar className="min-h-12 min-w-12">
 								<AvatarImage src={user.avatar} />
 								<AvatarFallback>{user.name.slice(0, 2)}</AvatarFallback>
 							</Avatar>
