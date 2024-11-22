@@ -88,8 +88,13 @@ const users = [
 	},
 ];
 
+const sidebarItems = [
+	{ icon: Grid, label: "Dashboard" },
+	{ icon: MessageCircle, label: "Messages", hasNotification: true },
+	{ icon: Archive, label: "Archive" },
+];
+
 export default function Component() {
-	const [message, setMessage] = useState("");
 	const [selectedUser, setSelectedUser] = useState(0);
 	const [selectedSidebarItem, setSelectedSidebarItem] = useState(1);
 	const [messages, setMessages] = useState([
@@ -97,18 +102,11 @@ export default function Component() {
 		{ text: "Hi there!", isSent: true },
 	]);
 
-	const sidebarItems = [
-		{ icon: Grid, label: "Dashboard" },
-		{ icon: MessageCircle, label: "Messages", hasNotification: true },
-		{ icon: Archive, label: "Archive" },
-	];
 	// Handler socket and signaling
-	const [isConnected, setIsConnected] = useState(false);
 	const [activeUsers, setActiveUsers] = useState([]);
-	const [isAuthenticated, setIsAuthenticated] = useState(false);
-	const [newMessage, setNewMessage] = useState("");
 	const [messageHistory, setMessageHistory] = useState({});
-	const [targetUser, setTargetUser] = useState("");
+	const [userSelected, setUserSelected] = useState({});
+	console.log("Component ~ userSelected:", userSelected);
 
 	const usernameRef = useRef("");
 
@@ -129,6 +127,7 @@ export default function Component() {
 	const connectToSignalingServer = () => {
 		const token = getToken();
 		const username = localStorage.getItem("username");
+		usernameRef.current = username;
 		const client = new Client({
 			webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
 			connectHeaders: { Authorization: `Bearer ${token}` },
@@ -136,11 +135,9 @@ export default function Component() {
 			reconnectDelay: 5000,
 			onDisconnect: () => {
 				console.error("Disconnected from signaling server");
-				setIsConnected(false);
 			},
 			onConnect: () => {
 				console.log("Connected to signaling server");
-				setIsConnected(true);
 
 				client.subscribe("/topic/users", (message) => {
 					// setActiveUsers(JSON.parse(message.body));
@@ -148,7 +145,6 @@ export default function Component() {
 
 				client.subscribe("/user/queue/active-friends", function (message) {
 					const activeFriends = JSON.parse(message.body);
-					console.log("Active friends:", activeFriends); // have data
 					setActiveUsers([...activeFriends]); // it doesnt set data here
 
 					// Update the UI with the active friends
@@ -210,12 +206,13 @@ export default function Component() {
 		};
 
 		dataChannel.onmessage = (event) => {
-			const message = event.data;
+			const data = JSON.parse(event.data);
+			console.log("startChat ~ message:", data);
 			setMessageHistory((prev) => ({
 				...prev,
 				[targetUser]: [
 					...(prev[targetUser] || []),
-					{ sender: targetUser, message },
+					{ sender: targetUser, message: data.message, type: data.type },
 				],
 			}));
 		};
@@ -248,8 +245,11 @@ export default function Component() {
 
 		newPeerConnection.ondatachannel = (event) => {
 			const receiveChannel = event.channel;
+			console.log("startChat ~ receiveChannel:", receiveChannel);
 			dataChannels.set(targetUser, receiveChannel);
 			receiveChannel.onmessage = (event) => {
+				console.log(`Received message from ${targetUser}:`, event.data);
+
 				setMessageHistory((prev) => ({
 					...prev,
 					[targetUser]: [
@@ -282,7 +282,11 @@ export default function Component() {
 					{ urls: "stun:stun.l.google.com:19302" },
 					{ urls: "stun:stun1.l.google.com:19302" },
 					{ urls: "stun:stun2.l.google.com:19302" },
-					// Add TURN servers here if necessary
+					{
+						urls: "turn:relay1.expressturn.com:3478",
+						username: "efW6L6DFWVSZPJXIQY",
+						credential: "hcyxASnlf91Dxla9",
+					},
 				];
 
 				const newPeerConnection = new RTCPeerConnection({ iceServers });
@@ -303,12 +307,15 @@ export default function Component() {
 				newPeerConnection.ondatachannel = (event) => {
 					const receiveChannel = event.channel;
 					dataChannels.set(sender, receiveChannel);
+					//? Receive data channel messages here
 					receiveChannel.onmessage = (event) => {
+						const data = JSON.parse(event.data);
+						console.log(`Received message from ${sender}:`, data);
 						setMessageHistory((prev) => ({
 							...prev,
 							[sender]: [
 								...(prev[sender] || []),
-								{ sender, message: event.data },
+								{ sender, message: data.message, type: data.type },
 							],
 						}));
 					};
@@ -372,6 +379,7 @@ export default function Component() {
 	const handleReceivedCandidate = async (message) => {
 		try {
 			const data = JSON.parse(message.body);
+			console.log("handleReceivedCandidate ~ data:", data);
 			const { candidate, sender } = data;
 
 			// Fallback to usernameFragment if sender is empty
@@ -474,21 +482,20 @@ export default function Component() {
 	};
 
 	// Send message over the data channel
-	const sendMessage = () => {
-		if (targetUser && dataChannels.has(targetUser)) {
-			const dataChannel = dataChannels.get(targetUser);
-			console.log("sendMessage ~ dataChannel:", dataChannel);
+	const sendMessage = (message, type) => {
+		if (userSelected.email && dataChannels.has(userSelected.email)) {
+			const dataChannel = dataChannels.get(userSelected.email);
+			console.log(`Sent message to ${userSelected.email}:`, message);
 
 			if (dataChannel.readyState === "open") {
-				dataChannel.send(newMessage);
+				dataChannel.send(JSON.stringify({ message: message, type: type }));
 				setMessageHistory((prev) => ({
 					...prev,
-					[targetUser]: [
-						...(prev[targetUser] || []),
-						{ sender: "You", message: newMessage },
+					[userSelected.email]: [
+						...(prev[userSelected.email] || []),
+						{ sender: "You", message: message, type: type },
 					],
 				}));
-				setNewMessage("");
 			} else if (dataChannel.readyState === "connecting") {
 				console.log("Data channel is still connecting. Please wait.");
 				setTimeout(sendMessage, 1000); // Retry after 1 second
@@ -515,20 +522,22 @@ export default function Component() {
 			<div className="flex-1 grid" style={{ gridTemplateColumns: "360px 1fr" }}>
 				{/* Left Sidebar */}
 				<ListUser
+					setUserSelected={setUserSelected}
 					activeUsers={activeUsers}
 					users={users}
 					selectedUser={selectedUser}
 					setSelectedUser={setSelectedUser}
+					startChat={startChat}
 				/>
 				{/* Main Chat Area */}
 				<div className="flex flex-col bg-zinc-900 overflow-auto">
 					{/* Chat Header */}
-					<ChatHeader users={users} selectedUser={selectedUser} />
+					<ChatHeader userSelected={userSelected} />
 					{/* Chat Messages */}
-					<ChatArea messages={messages} />
+					<ChatArea messagesHistory={messageHistory[userSelected.email]} />
 
 					{/* Message Input */}
-					<MessageInput message={messages} setMessage={setMessages} />
+					<MessageInput sendMessage={sendMessage} />
 				</div>
 			</div>
 		</div>

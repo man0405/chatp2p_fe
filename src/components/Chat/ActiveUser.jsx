@@ -1,8 +1,11 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export default function ActiveUser({ activeUsers }) {
-	console.log("ActiveUser ~ activeUser:", activeUsers);
+export default function ActiveUser({
+	activeUsers,
+	setUserSelected,
+	startChat,
+}) {
 	return (
 		<div className="p-4 border-zinc-800">
 			<div className="flex gap-2 overflow-x-auto">
@@ -11,6 +14,10 @@ export default function ActiveUser({ activeUsers }) {
 					<div
 						key={index}
 						className="flex flex-col items-center gap-1 min-w-[64px]"
+						onClick={() => {
+							setUserSelected(data);
+							startChat(data.email);
+						}}
 					>
 						<div className="relative">
 							<Avatar className="h-14 w-14 border border-gray-800">

@@ -61,7 +61,7 @@ export default function LoginPage() {
 				setToken(response.data);
 				localStorage.setItem("username", formData.email);
 				console.log("handleSubmit ~ response:", response);
-				navigate("/");
+				navigate("/test");
 				return;
 			}
 		} catch (error) {

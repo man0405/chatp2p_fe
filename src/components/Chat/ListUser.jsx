@@ -11,8 +11,9 @@ export default function ListUser({
 	selectedUser,
 	setSelectedUser,
 	activeUsers,
+	setUserSelected,
+	startChat,
 }) {
-	console.log("activeUser in list user :", activeUsers);
 	return (
 		<div className="bg-zinc-900 border-r border-zinc-800 h-screen overflow-hidden flex flex-col ">
 			<div className="p-4 border-zinc-800">
@@ -34,7 +35,11 @@ export default function ListUser({
 					/>
 				</div>
 			</div>
-			<ActiveUser activeUsers={activeUsers} />
+			<ActiveUser
+				activeUsers={activeUsers}
+				setUserSelected={setUserSelected}
+				startChat={startChat}
+			/>
 			<ScrollArea className=" p-4">
 				{users.map((user, index) => (
 					<div
