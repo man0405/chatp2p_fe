@@ -58,11 +58,17 @@ export default function LoginPage() {
 		try {
 			const response = await login(formData.email, formData.password);
 			if (response.success) {
-				setToken(response.data);
+				setToken(response.data.token);
+				localStorage.setItem("fullName", response.data.fullName);
 				localStorage.setItem("username", formData.email);
 				console.log("handleSubmit ~ response:", response);
-				navigate("/");
+				navigate("/test");
 				return;
+			} else {
+				setErrors({
+					email: response.data,
+					password: response.data,
+				});
 			}
 		} catch (error) {
 			console.error(error);

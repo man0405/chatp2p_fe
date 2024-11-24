@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Camera, Smile, Send, ThumbsUp } from "lucide-react";
 
-export function MessageInput({ onSend }) {
+export function MessageInput({ sendMessage }) {
 	const [message, setMessage] = useState("");
 
 	const handleSend = () => {
 		if (message.trim()) {
-			onSend(message.trim());
+			sendMessage(message, "text");
 			setMessage("");
 		}
 	};

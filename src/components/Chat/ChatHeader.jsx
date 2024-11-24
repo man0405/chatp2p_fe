@@ -3,23 +3,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Info, Phone, Search, Video } from "lucide-react";
 
-export default function ChatHeader({ users, selectedUser }) {
+export default function ChatHeader({ userSelected }) {
 	return (
 		<div className="flex items-center justify-between p-2 border-b border-zinc-800">
 			<div className="flex items-center gap-3">
 				<Avatar>
-					<AvatarImage src={users[selectedUser].avatar} />
-					<AvatarFallback>
-						{users[selectedUser].name.slice(0, 2)}
-					</AvatarFallback>
+					<AvatarImage
+						src={`https://placehold.jp/75/3d4070/ffffff/150x150.png?text=${userSelected.fullName?.[0]}`}
+					/>
+					<AvatarFallback>{userSelected.fullName?.slice(0, 2)}</AvatarFallback>
 				</Avatar>
 				<div className="flex flex-col">
 					<span className="font-semibold text-zinc-200">
-						{users[selectedUser].name}
+						{userSelected.fullName}
 					</span>
-					<span className="text-xs text-zinc-400">
-						{users[selectedUser].status}
-					</span>
+					<span className="text-xs text-zinc-400">Online</span>
 				</div>
 			</div>
 			<div className="flex items-center gap-2">

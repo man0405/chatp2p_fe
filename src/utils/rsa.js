@@ -127,21 +127,34 @@ export async function getStoredKeys() {
 		const tx = db.transaction("keys", "readonly");
 		const store = tx.objectStore("keys");
 
+		// Helper function to wrap get request in a Promise
+		const getKey = (keyName) => {
+			return new Promise((resolve, reject) => {
+				const request = store.get(keyName);
+				request.onsuccess = () => resolve(request.result);
+				request.onerror = () => reject(request.error);
+			});
+		};
+
 		// Retrieve the PEM strings
 		const [publicKeyPEM, privateKeyPEM] = await Promise.all([
-			store.get("publicKey"),
-			store.get("privateKey"),
+			getKey("publicKey"),
+			getKey("privateKey"),
 		]);
 
 		await tx.complete;
 
-		if (!publicKeyPEM || !privateKeyPEM) return null;
+		if (!publicKeyPEM || !privateKeyPEM) {
+			console.error("PEM keys not found in IndexedDB.");
+			return null;
+		}
+		console.log("rsa", publicKeyPEM);
 
-		// Import the keys back into CryptoKey objects
-		const publicKey = await importPEMKey(publicKeyPEM, "public");
-		const privateKey = await importPEMKey(privateKeyPEM, "private");
+		// // Import the keys back into CryptoKey objects
+		// const publicKey = await importPEMKey(publicKeyPEM, "public");
+		// const privateKey = await importPEMKey(privateKeyPEM, "private");
 
-		return { publicKey, privateKey };
+		return { publicKey: publicKeyPEM, privateKey: privateKeyPEM };
 	} catch (error) {
 		console.error("Error getting stored keys:", error);
 		return null;

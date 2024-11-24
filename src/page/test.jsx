@@ -9,108 +9,33 @@ import { MessageInput } from "@/components/Chat/MessageInput";
 import { ChatArea } from "@/components/Chat/ChatArea";
 import ChatHeader from "@/components/Chat/ChatHeader";
 import { getToken } from "@/services/token.service";
+import {
+	storeMessageHistory,
+	getMessageHistory,
+	storeLatestMessage,
+	getLatestMessages,
+} from "@/services/message.service";
+import { debounce } from "@/utils/debounce";
+import { getStoredKeys } from "@/utils/rsa";
 
-const users = [
-	{
-		name: "mit uốt",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Chức NỮ",
-		status: "Last seen 5m ago",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Vincom",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "BCS-22GIT2",
-		status: "Last seen 1h ago",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Khẩu nghiệp",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "mit uốt",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Chức NỮ",
-		status: "Last seen 5m ago",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Vincom",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "BCS-22GIT2",
-		status: "Last seen 1h ago",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Khẩu nghiệp",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "mit uốt",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Chức NỮ",
-		status: "Last seen 5m ago",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Vincom",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "BCS-22GIT2",
-		status: "Last seen 1h ago",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
-	{
-		name: "Khẩu nghiệp",
-		status: "Active now",
-		avatar: "/placeholder.svg?height=40&width=40",
-	},
+const sidebarItems = [
+	{ icon: Grid, label: "Dashboard" },
+	{ icon: MessageCircle, label: "Messages", hasNotification: true },
+	{ icon: Archive, label: "Archive" },
 ];
 
 export default function Component() {
-	const [message, setMessage] = useState("");
-	const [selectedUser, setSelectedUser] = useState(0);
 	const [selectedSidebarItem, setSelectedSidebarItem] = useState(1);
-	const [messages, setMessages] = useState([
-		{ text: "Hello!", isSent: false },
-		{ text: "Hi there!", isSent: true },
-	]);
 
-	const sidebarItems = [
-		{ icon: Grid, label: "Dashboard" },
-		{ icon: MessageCircle, label: "Messages", hasNotification: true },
-		{ icon: Archive, label: "Archive" },
-	];
 	// Handler socket and signaling
-	const [isConnected, setIsConnected] = useState(false);
 	const [activeUsers, setActiveUsers] = useState([]);
-	const [isAuthenticated, setIsAuthenticated] = useState(false);
-	const [newMessage, setNewMessage] = useState("");
 	const [messageHistory, setMessageHistory] = useState({});
-	const [targetUser, setTargetUser] = useState("");
+	const [userSelected, setUserSelected] = useState({});
+	const [latestMessage, setLatestMessage] = useState([]);
 
 	const usernameRef = useRef("");
+	const fullName = useRef(localStorage.getItem("fullName"));
+	const publicKey = useRef("");
 
 	const clientRef = useRef(null);
 	const peerConnections = useRef(new Map()).current;
@@ -120,27 +45,60 @@ export default function Component() {
 	// Connect to the signaling server
 	useEffect(() => {
 		connectToSignalingServer();
+		const getKeys = async () => {
+			const keys = await getStoredKeys();
+			if (keys) {
+				publicKey.current = keys.publicKey;
+			}
+		};
+		getKeys();
 	}, []);
 
 	useEffect(() => {
-		console.log("ActiveUsers state:", activeUsers);
-	}, [activeUsers]);
+		getLatestMessages().then((messages) => {
+			setLatestMessage(messages);
+		});
+	}, []);
+
+	// Debounce the create / update latest message
+	const storeLeastMessageHandler = ({
+		keys,
+		message,
+		type,
+		fullName,
+		publicKey,
+	}) => {
+		debounce(
+			storeLatestMessage({ keys, message, type, fullName, publicKey }),
+			1000
+		);
+	};
+
+	useEffect(() => {
+		if (userSelected.email) {
+			getMessageHistory(userSelected.email).then((messages) => {
+				setMessageHistory((prev) => ({
+					...prev,
+					[userSelected.email]: messages,
+				}));
+			});
+		}
+	}, [userSelected]);
 
 	const connectToSignalingServer = () => {
 		const token = getToken();
 		const username = localStorage.getItem("username");
+		usernameRef.current = username;
 		const client = new Client({
 			webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
 			connectHeaders: { Authorization: `Bearer ${token}` },
-			debug: (str) => console.log("STOMP Debug:", str),
+			// debug: (str) => console.log("STOMP Debug:", str),
 			reconnectDelay: 5000,
 			onDisconnect: () => {
 				console.error("Disconnected from signaling server");
-				setIsConnected(false);
 			},
 			onConnect: () => {
 				console.log("Connected to signaling server");
-				setIsConnected(true);
 
 				client.subscribe("/topic/users", (message) => {
 					// setActiveUsers(JSON.parse(message.body));
@@ -148,7 +106,6 @@ export default function Component() {
 
 				client.subscribe("/user/queue/active-friends", function (message) {
 					const activeFriends = JSON.parse(message.body);
-					console.log("Active friends:", activeFriends); // have data
 					setActiveUsers([...activeFriends]); // it doesnt set data here
 
 					// Update the UI with the active friends
@@ -177,6 +134,7 @@ export default function Component() {
 		client.activate();
 		clientRef.current = client;
 	};
+
 	const startChat = async (targetUser) => {
 		if (peerConnections.has(targetUser)) {
 			console.warn(`Already connected to ${targetUser}`);
@@ -185,8 +143,21 @@ export default function Component() {
 
 		const iceServers = [
 			{ urls: "stun:stun.l.google.com:19302" },
-			{ urls: "stun:stun1.l.google.com:19302" },
+			{ urls: "stun:stun.l.google.com:5349" },
+			{ urls: "stun:stun1.l.google.com:3478" },
+			{ urls: "stun:stun1.l.google.com:5349" },
 			{ urls: "stun:stun2.l.google.com:19302" },
+			{ urls: "stun:stun2.l.google.com:5349" },
+			{ urls: "stun:stun3.l.google.com:3478" },
+			{ urls: "stun:stun3.l.google.com:5349" },
+			{ urls: "stun:stun4.l.google.com:19302" },
+			{ urls: "stun:stun4.l.google.com:5349" },
+			{
+				urls: "turn:relay1.expressturn.com:3478",
+				username: "efW6L6DFWVSZPJXIQY",
+				credential: "hcyxASnlf91Dxla9",
+			},
+
 			// Add TURN servers here if necessary
 		];
 
@@ -210,14 +181,28 @@ export default function Component() {
 		};
 
 		dataChannel.onmessage = (event) => {
-			const message = event.data;
+			const data = JSON.parse(event.data);
+			console.log("startChat ~ message:", data);
 			setMessageHistory((prev) => ({
 				...prev,
 				[targetUser]: [
 					...(prev[targetUser] || []),
-					{ sender: targetUser, message },
+					{ sender: targetUser, message: data.message, type: data.type },
 				],
 			}));
+			storeMessageHistory({
+				sender: targetUser,
+				message: data.message,
+				type: data.type,
+				keys: targetUser,
+			});
+			storeLeastMessageHandler({
+				keys: targetUser,
+				message: data.message,
+				type: data.type,
+				name: data.fullName,
+				publicKey: data.publicKey,
+			});
 		};
 
 		// Peer Connection Event Handlers
@@ -248,15 +233,32 @@ export default function Component() {
 
 		newPeerConnection.ondatachannel = (event) => {
 			const receiveChannel = event.channel;
+			console.log("startChat ~ receiveChannel:", receiveChannel);
 			dataChannels.set(targetUser, receiveChannel);
 			receiveChannel.onmessage = (event) => {
+				console.log(`Received message from ${targetUser}:`, event.data);
+				const data = JSON.parse(event.data);
+
 				setMessageHistory((prev) => ({
 					...prev,
 					[targetUser]: [
 						...(prev[targetUser] || []),
-						{ sender: targetUser, message: event.data },
+						{ sender: targetUser, message: data.message, type: data.type },
 					],
 				}));
+				storeMessageHistory({
+					sender: targetUser,
+					message: data.message,
+					type: data.type,
+					keys: targetUser,
+				});
+				storeLeastMessageHandler({
+					keys: targetUser,
+					message: data.message,
+					type: data.type,
+					fullName: data.fullName,
+					publicKey: data.publicKey,
+				});
 			};
 		};
 
@@ -280,9 +282,20 @@ export default function Component() {
 			if (!peerConnections.has(sender)) {
 				const iceServers = [
 					{ urls: "stun:stun.l.google.com:19302" },
-					{ urls: "stun:stun1.l.google.com:19302" },
+					{ urls: "stun:stun.l.google.com:5349" },
+					{ urls: "stun:stun1.l.google.com:3478" },
+					{ urls: "stun:stun1.l.google.com:5349" },
 					{ urls: "stun:stun2.l.google.com:19302" },
-					// Add TURN servers here if necessary
+					{ urls: "stun:stun2.l.google.com:5349" },
+					{ urls: "stun:stun3.l.google.com:3478" },
+					{ urls: "stun:stun3.l.google.com:5349" },
+					{ urls: "stun:stun4.l.google.com:19302" },
+					{ urls: "stun:stun4.l.google.com:5349" },
+					{
+						urls: "turn:relay1.expressturn.com:3478",
+						username: "efW6L6DFWVSZPJXIQY",
+						credential: "hcyxASnlf91Dxla9",
+					},
 				];
 
 				const newPeerConnection = new RTCPeerConnection({ iceServers });
@@ -303,14 +316,30 @@ export default function Component() {
 				newPeerConnection.ondatachannel = (event) => {
 					const receiveChannel = event.channel;
 					dataChannels.set(sender, receiveChannel);
+					//? Receive data channel messages here
 					receiveChannel.onmessage = (event) => {
+						const data = JSON.parse(event.data);
+						console.log(`Received message from ${sender}:`, data);
 						setMessageHistory((prev) => ({
 							...prev,
 							[sender]: [
 								...(prev[sender] || []),
-								{ sender, message: event.data },
+								{ sender, message: data.message, type: data.type },
 							],
 						}));
+						storeMessageHistory({
+							sender,
+							message: data.message,
+							type: data.type,
+							keys: sender,
+						});
+						storeLeastMessageHandler({
+							keys: sender,
+							message: data.message,
+							type: data.type,
+							fullName: data.fullName,
+							publicKey: data.publicKey,
+						});
 					};
 				};
 
@@ -372,6 +401,7 @@ export default function Component() {
 	const handleReceivedCandidate = async (message) => {
 		try {
 			const data = JSON.parse(message.body);
+			console.log("handleReceivedCandidate ~ data:", data);
 			const { candidate, sender } = data;
 
 			// Fallback to usernameFragment if sender is empty
@@ -474,21 +504,49 @@ export default function Component() {
 	};
 
 	// Send message over the data channel
-	const sendMessage = () => {
-		if (targetUser && dataChannels.has(targetUser)) {
-			const dataChannel = dataChannels.get(targetUser);
-			console.log("sendMessage ~ dataChannel:", dataChannel);
+	const sendMessage = (message, type) => {
+		if (userSelected.email && dataChannels.has(userSelected.email)) {
+			const dataChannel = dataChannels.get(userSelected.email);
+			console.log(`Sent message to ${userSelected.email}:`, message);
+			console.log(
+				"sendMessage ~ dataChannel.readyState:",
+				JSON.stringify({
+					message: message,
+					type: type,
+					fullName: fullName.current,
+					publicKey: publicKey.current,
+				})
+			);
 
 			if (dataChannel.readyState === "open") {
-				dataChannel.send(newMessage);
+				dataChannel.send(
+					JSON.stringify({
+						message: message,
+						type: type,
+						fullName: fullName.current,
+						publicKey: publicKey.current,
+					})
+				);
 				setMessageHistory((prev) => ({
 					...prev,
-					[targetUser]: [
-						...(prev[targetUser] || []),
-						{ sender: "You", message: newMessage },
+					[userSelected.email]: [
+						...(prev[userSelected.email] || []),
+						{ sender: usernameRef.current, message: message, type: type },
 					],
 				}));
-				setNewMessage("");
+				storeMessageHistory({
+					sender: usernameRef.current,
+					message,
+					type,
+					keys: userSelected.email,
+				});
+				storeLeastMessageHandler({
+					keys: userSelected.email,
+					message,
+					type,
+					fullName: userSelected.fullName,
+					publicKey: userSelected.publicKey,
+				});
 			} else if (dataChannel.readyState === "connecting") {
 				console.log("Data channel is still connecting. Please wait.");
 				setTimeout(sendMessage, 1000); // Retry after 1 second
@@ -515,20 +573,24 @@ export default function Component() {
 			<div className="flex-1 grid" style={{ gridTemplateColumns: "360px 1fr" }}>
 				{/* Left Sidebar */}
 				<ListUser
+					latestMessage={latestMessage}
+					userSelected={userSelected}
+					setUserSelected={setUserSelected}
 					activeUsers={activeUsers}
-					users={users}
-					selectedUser={selectedUser}
-					setSelectedUser={setSelectedUser}
+					startChat={startChat}
 				/>
 				{/* Main Chat Area */}
 				<div className="flex flex-col bg-zinc-900 overflow-auto">
 					{/* Chat Header */}
-					<ChatHeader users={users} selectedUser={selectedUser} />
+					<ChatHeader userSelected={userSelected} />
 					{/* Chat Messages */}
-					<ChatArea messages={messages} />
+					<ChatArea
+						messagesHistory={messageHistory[userSelected.email]}
+						username={usernameRef.current}
+					/>
 
 					{/* Message Input */}
-					<MessageInput message={messages} setMessage={setMessages} />
+					<MessageInput sendMessage={sendMessage} />
 				</div>
 			</div>
 		</div>
