@@ -1,7 +1,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export function ChatArea({ messagesHistory }) {
-	console.log("ChatArea ~ messagesHistory:", messagesHistory);
+export function ChatArea({ messagesHistory, username }) {
+	console.log("ChatArea ~ username:", username);
 	return (
 		<ScrollArea className="flex-1 p-4">
 			<div className="space-y-4">
@@ -9,12 +9,12 @@ export function ChatArea({ messagesHistory }) {
 					<div
 						key={index}
 						className={`flex ${
-							msg.sender === "You" ? "justify-end gap-2" : "justify-start"
+							msg.sender === username ? "justify-end gap-2" : "justify-start"
 						}`}
 					>
 						<div
 							className={`${
-								msg.sender === "You"
+								msg.sender === username
 									? "bg-blue-600 text-white"
 									: "bg-zinc-800 text-zinc-200"
 							} rounded-2xl px-4 py-2 max-w-[80%]`}
