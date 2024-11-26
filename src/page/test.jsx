@@ -42,6 +42,16 @@ export default function Component() {
 	const dataChannels = useRef(new Map()).current;
 	const iceCandidatesQueue = useRef(new Map()).current;
 
+	const disconnect = () => {
+		if (clientRef.current) {
+			clientRef.current.publish({
+				destination: "/app/exit",
+				body: usernameRef.current,
+			});
+			console.log("WebSocket connection closed");
+		}
+	};
+
 	// Connect to the signaling server
 	useEffect(() => {
 		connectToSignalingServer();
@@ -95,6 +105,7 @@ export default function Component() {
 			// debug: (str) => console.log("STOMP Debug:", str),
 			reconnectDelay: 5000,
 			onDisconnect: () => {
+				disconnect();
 				console.error("Disconnected from signaling server");
 			},
 			onConnect: () => {
