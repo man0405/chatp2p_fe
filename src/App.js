@@ -25,6 +25,7 @@ import {
 import AddFriendModal from "@/components/Chat/AddFriendModal";
 import ChatHeader from "./components/Chat/ChatHeader";
 
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const WebRTCComponent = () => {
   const [email, setEmail] = useState("");
@@ -39,12 +40,32 @@ const WebRTCComponent = () => {
   const [message, setMessage] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-
   const clientRef = useRef(null);
   const peerConnections = useRef(new Map()).current;
   const dataChannels = useRef(new Map()).current;
   const iceCandidatesQueue = useRef(new Map()).current;
 
+  const startCall = async (targetUser) => {
+    console.log("startCall invoked with:", targetUser);
+    // Ensure targetUser is not an event object
+    if (targetUser && typeof targetUser !== "string") {
+      console.error("Invalid targetUser:", targetUser);
+      return;
+    }
+
+    // Avoid accidentally passing the event object
+    const callNotificationPayload = {
+      targetUser,
+      caller: username,
+    };
+
+    // Notify the target user about the call
+    clientRef.current.publish({
+      destination: `/app/call-notification`,
+      body: JSON.stringify(callNotificationPayload), // Ensure only serializable data
+    });
+    console.log(`Call notification sent to ${targetUser}`);
+  };
 
   const iceServers = [
     { urls: "stun:stun.l.google.com:19302" },
@@ -118,6 +139,11 @@ const WebRTCComponent = () => {
         client.subscribe(`/topic/${user}/offer`, handleReceivedOffer);
         client.subscribe(`/topic/${user}/answer`, handleReceivedAnswer);
         client.subscribe(`/topic/${user}/candidate`, handleReceivedCandidate);
+        client.subscribe(
+          `/topic/${user}/call-notification`,
+          handleCallNotification
+        );
+        client.subscribe(`/topic/${user}/call-accepted`, hanedleCallAccepted);
       },
       onStompError: (frame) => {
         console.error("STOMP error:", frame.headers["message"]);
@@ -129,12 +155,46 @@ const WebRTCComponent = () => {
     clientRef.current = client;
   };
 
+  const hanedleCallAccepted = (message) => {
+    try {
+      const { targetUser } = JSON.parse(message.body);
+      console.log("message.body", message.body);
+
+      openCallTab(usernameRef.current, targetUser);
+    } catch (error) {
+      console.error("Error handling call acceptejd:", error);
+    }
+  };
+
+  const handleCallNotification = (message) => {
+    try {
+      const { caller, message: notification = "Incoming call" } = JSON.parse(
+        message.body
+      );
+      console.log(`Incoming call notification from ${caller}: ${notification}`);
+
+      const accept = window.confirm(`${caller} is calling you. Accept?`);
+      if (accept) {
+        console.log("Call accepted. Starting chat with:", caller);
+        openCallTab(usernameRef.current, caller);
+        clientRef.current.publish({
+          destination: `/app/call-accepted`,
+          body: JSON.stringify({
+            targetUser: caller,
+            sender: usernameRef.current,
+          }),
+        });
+      }
+    } catch (error) {
+      console.error("Error handling call notification:", error);
+    }
+  };
+
   const startChat = async (targetUser) => {
     if (peerConnections.has(targetUser)) {
       console.warn(`Already connected to ${targetUser}`);
       return;
     }
-
 
     const newPeerConnection = new RTCPeerConnection({ iceServers });
     peerConnections.set(targetUser, newPeerConnection);
@@ -205,7 +265,6 @@ const WebRTCComponent = () => {
         }));
       };
     };
-
     try {
       const offer = await newPeerConnection.createOffer();
       await newPeerConnection.setLocalDescription(offer);
@@ -441,6 +500,21 @@ const WebRTCComponent = () => {
     }
   };
 
+  const openCallTab = (username, targetUser) => {
+    console.log("Opening call tab...");
+    const url = `/call?username=${encodeURIComponent(
+      username
+    )}&targetUser=${encodeURIComponent(targetUser)}`;
+    console.log("Opening URL:", url);
+
+    // Open a new tab or window
+    const newWindow = window.open(url, "_blank", "width=800,height=600");
+    if (!newWindow) {
+      console.error("Failed to open call tab. Check popup blockers.");
+    } else {
+      console.log("Call tab opened successfully.");
+    }
+  };
 
   const disconnect = () => {
     if (clientRef.current) {
@@ -454,6 +528,7 @@ const WebRTCComponent = () => {
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
+      {/* <VideoCall isOpen={isModalOpen} setIsOpen={setIsModalOpen} /> */}
       {/* Left Panel: Active Users */}
       <div
         style={{ width: "25%", borderRight: "1px solid gray", padding: "10px" }}
@@ -531,11 +606,11 @@ const WebRTCComponent = () => {
               onChange={(e) => setNewMessage(e.target.value)}
             />
             <button onClick={sendMessage}>Send Message</button>
+            <Button onClick={() => startCall(targetUser)}>Call</Button>
           </>
         ) : (
           <p>Select a user to start chatting.</p>
         )}
-
       </div>
     </div>
   );
