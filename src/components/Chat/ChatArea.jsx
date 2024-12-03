@@ -1,10 +1,19 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect, useRef } from "react";
+import { scrollToBottom } from "@/utils/scrollToBottom";
 
 export function ChatArea({ messagesHistory, username }) {
 	console.log("ChatArea ~ username:", username);
+	const scrollBotton = useRef();
+	useEffect(() => {
+		if (scrollBotton.current) {
+			scrollToBottom(scrollBotton.current, true);
+		}
+	}, [messagesHistory]);
+
 	return (
 		<ScrollArea className="flex-1 p-4">
-			<div className="space-y-4">
+			<div className="space-y-4" ref={scrollBotton}>
 				{messagesHistory?.map((msg, index) => (
 					<div
 						key={index}

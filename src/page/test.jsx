@@ -78,10 +78,34 @@ export default function Component() {
 		fullName,
 		publicKey,
 	}) => {
+		console.log(
+			"storeLeastMessageHandler ~ keys:",
+			keys,
+			message,
+			type,
+			fullName
+		);
 		debounce(
 			storeLatestMessage({ keys, message, type, fullName, publicKey }),
 			1000
 		);
+		setLatestMessage((prev) => {
+			const newMessage = {
+				keys,
+				message,
+				type,
+				fullName,
+				publicKey,
+			};
+			const index = prev.findIndex((item) => item.keys === keys);
+			if (index === -1) {
+				return [newMessage, ...prev];
+			} else {
+				const newMessages = [...prev];
+				newMessages[index] = newMessage;
+				return newMessages;
+			}
+		});
 	};
 
 	useEffect(() => {
@@ -211,7 +235,7 @@ export default function Component() {
 				keys: targetUser,
 				message: data.message,
 				type: data.type,
-				name: data.fullName,
+				fullName: data.fullName,
 				publicKey: data.publicKey,
 			});
 		};
