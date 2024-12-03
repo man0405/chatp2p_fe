@@ -45,7 +45,7 @@ export const getMessageHistory = async (keys) => {
 		await tx.done;
 
 		// Optionally, sort messages by timestamp
-		messages.sort((a, b) => b.timestamp - a.timestamp);
+		messages.sort((a, b) => -b.timestamp + a.timestamp);
 
 		return messages;
 	} catch (error) {
