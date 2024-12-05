@@ -148,11 +148,6 @@ export async function getStoredKeys() {
 			console.error("PEM keys not found in IndexedDB.");
 			return null;
 		}
-		console.log("rsa", publicKeyPEM);
-
-		// // Import the keys back into CryptoKey objects
-		// const publicKey = await importPEMKey(publicKeyPEM, "public");
-		// const privateKey = await importPEMKey(privateKeyPEM, "private");
 
 		return { publicKey: publicKeyPEM, privateKey: privateKeyPEM };
 	} catch (error) {

@@ -602,6 +602,7 @@ export default function Component() {
 				selectedSidebarItem={selectedSidebarItem}
 				setSelectedSidebarItem={setSelectedSidebarItem}
 				sidebarItems={sidebarItems}
+				fullName={fullName.current}
 			/>
 
 			{/* Main Content */}
