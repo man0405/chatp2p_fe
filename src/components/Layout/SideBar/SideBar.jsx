@@ -26,9 +26,6 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-
 import Backup from "@/components/Preference/Backup";
 
 const settingsOptions = [
@@ -130,7 +127,7 @@ export default function SideBar({
 									Preference
 								</Button>
 							</DialogTrigger>
-							<DialogContent className="flex  bg-zinc-900 border-zinc-800 gap-0 p-0 md:min-h-[600px] md:max-w-4xl">
+							<DialogContent className="flex  bg-zinc-900 border-zinc-800 gap-0 p-0 md:min-h-[600px] md:max-w-4xl text-white ">
 								<div className="w-64 border-r text-white">
 									<div className="p-6">
 										<h2 className="text-lg font-semibold">Preferences</h2>
