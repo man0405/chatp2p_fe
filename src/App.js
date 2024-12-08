@@ -90,25 +90,26 @@ const WebRTCComponent = () => {
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        const token = await response.text();
-        localStorage.setItem("token", token);
-        setIsAuthenticated(true);
+			if (response.ok) {
+				const token = await response.json();
+				console.log("handleLogin ~ token:", token);
+				localStorage.setItem("token", token.data);
+				setIsAuthenticated(true);
 
         // Extract the username from email or set it explicitly
         const extractedUsername = email.split("@")[0];
         setUsername(extractedUsername);
         console.log("Username set to:", extractedUsername); // Logging
 
-        // Connect to signaling server after setting username
-        connectToSignalingServer(token, extractedUsername);
-      } else {
-        console.error("Login failed");
-      }
-    } catch (error) {
-      console.error("Error during login:", error);
-    }
-  };
+				// Connect to signaling server after setting username
+				connectToSignalingServer(token.data, extractedUsername);
+			} else {
+				console.error("Login failed");
+			}
+		} catch (error) {
+			console.error("Error during login:", error);
+		}
+	};
 
   // Connect to the signaling server with JWT
   const connectToSignalingServer = (token, user) => {
