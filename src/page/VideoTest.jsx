@@ -20,20 +20,8 @@ export default function Call() {
 
   const servers = [
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun.l.google.com:5349" },
-    { urls: "stun:stun1.l.google.com:3478" },
-    { urls: "stun:stun1.l.google.com:5349" },
+    { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:5349" },
-    { urls: "stun:stun3.l.google.com:3478" },
-    { urls: "stun:stun3.l.google.com:5349" },
-    { urls: "stun:stun4.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:5349" },
-    {
-      urls: "turn:relay1.expressturn.com:3478",
-      username: "efW6L6DFWVSZPJXIQY",
-      credential: "hcyxASnlf91Dxla9",
-    },
   ];
 
   useEffect(() => {
@@ -71,13 +59,14 @@ export default function Call() {
           handleIncomingCandidate
         );
 
-        // Start the call once connected to the signaling server
+        // Automatically start the call after connecting and setting username
         startCall();
       },
       onStompError: (frame) => {
         console.error("STOMP error:", frame.headers["message"]);
       },
     });
+
     client.activate();
     clientRef.current = client;
 
@@ -107,39 +96,41 @@ export default function Call() {
     };
 
     peerConnection.oniceconnectionstatechange = () => {
-      const iceState = peerConnection.iceConnectionState;
-      console.log("ICE connection state:", iceState);
-
-      if (iceState === "failed") {
-        console.log("ICE connection failed. Possible NAT issue detected.");
-      } else if (iceState === "disconnected") {
-        console.log("ICE connection disconnected.");
-      } else if (iceState === "connected") {
-        console.log("Peers are connected!");
-        setIsConnected(true);
-      }
+      console.log("ICE connection state:", peerConnection.iceConnectionState);
     };
 
     peerConnection.ontrack = (event) => {
-      console.log("ontrack event:", event);
-      if (event.streams && event.streams[0]) {
-        console.log("Remote stream received:", event.streams[0]);
-        remoteStreamRef.current = event.streams[0];
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
+      console.log("Remote stream received:", event.streams[0]);
+      remoteStreamRef.current = event.streams[0];
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    let isReconnecting = false;
+
+    peerConnection.oniceconnectionstatechange = () => {
+      const iceState = peerConnection.iceConnectionState;
+      console.log("ICE connection state:", iceState);
+
+      if (iceState === "disconnected" || iceState === "failed") {
+        console.log("Connection lost. Retrying...");
+        if (!isReconnecting) {
+          isReconnecting = true;
+          startCall(); // Retry the call
         }
-      } else {
-        console.warn("No streams found in ontrack event");
+      }
+
+      if (iceState === "connected") {
+        console.log("Peers are connected!");
+        setIsConnected(true);
+        isReconnecting = false; // Stop retrying once connected
       }
     };
 
     return peerConnection;
   };
 
-  const [isRemoteStreamReady, setIsRemoteStreamReady] = useState(false);
-  const [isLocalStreamReady, setIsLocalStreamReady] = useState(false);
-
-  // Updated Start Call
   const startCall = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -148,8 +139,6 @@ export default function Call() {
       });
 
       localStreamRef.current = stream;
-      setIsLocalStreamReady(true);
-
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
@@ -196,12 +185,6 @@ export default function Call() {
         audio: true,
       });
       localStreamRef.current = stream;
-      setIsLocalStreamReady(true);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
       stream.getTracks().forEach((track) => {
         peerConnection.addTrack(track, stream);
       });
@@ -229,9 +212,8 @@ export default function Call() {
       const { answer, sender } = JSON.parse(message.body);
       console.log("Received answer from:", sender);
 
-      const peerConnection = peerConnectionRef.current;
-      if (peerConnection) {
-        await peerConnection.setRemoteDescription(
+      if (peerConnectionRef.current) {
+        await peerConnectionRef.current.setRemoteDescription(
           new RTCSessionDescription(answer)
         );
         setIsConnected(true);
@@ -257,6 +239,7 @@ export default function Call() {
           .catch((error) => {
             console.error("Error adding ICE candidate", error);
           });
+        console.log("Added ICE candidate");
       }
     } catch (err) {
       console.error("Error handling incoming candidate:", err);
@@ -295,9 +278,6 @@ export default function Call() {
           audio: true,
         });
         localStreamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
         setIsMicOn(true);
       } catch (err) {
         console.error("Error accessing microphone:", err);
@@ -310,16 +290,18 @@ export default function Call() {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
-
-    if (clientRef.current) {
-      clientRef.current.deactivate();
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
     }
-
-    setIsCallStarted(false);
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach((track) => track.stop());
+      remoteStreamRef.current = null;
+    }
     setIsCameraOn(false);
     setIsMicOn(false);
     setIsConnected(false);
-    console.log("Call ended.");
+    console.log("Call ended");
   };
 
   return (
@@ -341,18 +323,14 @@ export default function Call() {
           />
         </div>
         <div className="relative w-full h-full">
-          {/* {isRemoteStreamReady ? ( */}
           <video
             ref={remoteVideoRef}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover ${
+              isConnected ? "" : "hidden"
+            }`}
             autoPlay
             playsInline
           />
-          {/* ) : ( */}
-          {/* <div className="flex justify-center items-center w-full h-full text-white">
-            Waiting for the remote user to connect...
-          </div> */}
-          {/* )} */}
         </div>
       </div>
 

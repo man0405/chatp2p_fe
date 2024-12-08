@@ -26,7 +26,6 @@ import AddFriendModal from "@/components/Chat/AddFriendModal";
 import ChatHeader from "./components/Chat/ChatHeader";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const WebRTCComponent = () => {
   const [email, setEmail] = useState("");
@@ -39,7 +38,6 @@ const WebRTCComponent = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
   const [message, setMessage] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const clientRef = useRef(null);
@@ -67,14 +65,6 @@ const WebRTCComponent = () => {
       body: JSON.stringify(callNotificationPayload), // Ensure only serializable data
     });
     console.log(`Call notification sent to ${targetUser}`);
-  };
-
-  const openCallTab = () => {
-    const url = `/call?username=${encodeURIComponent(
-      username
-    )}&targetUser=${encodeURIComponent(targetUser)}`;
-
-    window.open(url, "_blank", "width=800,height=600");
   };
 
   const iceServers = [
@@ -736,7 +726,6 @@ const WebRTCComponent = () => {
             />
             <button onClick={sendMessage}>Send Message</button>
             <Button onClick={() => startCall(targetUser)}>Call</Button>
-            <Button onClick={openCallTab}>Call</Button>
           </>
         ) : (
           <p>Select a user to start chatting.</p>
