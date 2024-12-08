@@ -26,6 +26,7 @@ import AddFriendModal from "@/components/Chat/AddFriendModal";
 import ChatHeader from "./components/Chat/ChatHeader";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const WebRTCComponent = () => {
   const [email, setEmail] = useState("");
@@ -38,6 +39,7 @@ const WebRTCComponent = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
   const [message, setMessage] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const clientRef = useRef(null);
@@ -65,6 +67,14 @@ const WebRTCComponent = () => {
       body: JSON.stringify(callNotificationPayload), // Ensure only serializable data
     });
     console.log(`Call notification sent to ${targetUser}`);
+  };
+
+  const openCallTab = () => {
+    const url = `/call?username=${encodeURIComponent(
+      username
+    )}&targetUser=${encodeURIComponent(targetUser)}`;
+
+    window.open(url, "_blank", "width=800,height=600");
   };
 
   const iceServers = [
@@ -526,6 +536,125 @@ const WebRTCComponent = () => {
     }
   };
 
+  // const VideoCall = ({ isOpen, setIsOpen }) => {
+  //   const [username, setUsername] = useState(this.username);
+  //   const [targetUser, setTargetUser] = useState(this.targetUser);
+  //   const [isCameraOn, setIsCameraOn] = useState(false);
+  //   const [isMicOn, setIsMicOn] = useState(false);
+  //   const [isConnected, setIsConnected] = useState(false);
+  //   const videoRef = useRef(null);
+  //   const remoteVideoRef = useRef(null);
+  //   const localStreamRef = useRef(null);
+  //   const remoteStreamRef = useRef(null);
+  //   const peerConnectionRef = useRef(null);
+  //   const clientRef = useRef(null);
+
+  //   const startCall = async () => {
+  //     try {
+  //       const stream = await navigator.mediaDevices.getUserMedia({
+  //         video: true,
+  //         audio: true,
+  //       });
+
+  //       localStreamRef.current = stream;
+  //       if (videoRef.current) {
+  //         videoRef.current.srcObject = stream;
+  //       }
+
+  //       const peerConnection = createPeerConnection();
+  //       peerConnectionRef.current = peerConnection;
+
+  //       stream.getTracks().forEach((track) => {
+  //         peerConnection.addTrack(track, stream);
+  //       });
+
+  //       const offer = await peerConnection.createOffer();
+  //       await peerConnection.setLocalDescription(offer);
+
+  //       console.log("Offer created and set:", offer);
+  //       console.log("Updated peerConnectionRef:", peerConnectionRef.current);
+  //     } catch (err) {
+  //       console.error("Error starting call:", err);
+  //     }
+  //   };
+
+  //   useEffect(() => {
+  //     // Log state changes for username and targetUser
+  //     console.log("Updated username:", username);
+  //     console.log("Updated targetUser:", targetUser);
+  //   }, [username, targetUser]);
+
+  //   const handleClose = () => {
+  //     setIsOpen(false); // Close the modal
+  //   };
+
+  //   return (
+  //     <Dialog open={isOpen} onOpenChange={setIsOpen}>
+  //       <DialogContent className="w-full max-w-lg p-6">
+  //         <DialogTitle>Calling</DialogTitle>
+
+  //         <div className="flex flex-col h-screen bg-gray-900">
+  //           <div className="flex-1 bg-black flex items-center justify-center relative">
+  //             <video
+  //               ref={videoRef}
+  //               className={`w-full max-h-[840px] object-cover ${
+  //                 isCameraOn ? "" : "hidden"
+  //               }`}
+  //               autoPlay
+  //               playsInline
+  //               muted
+  //             />
+  //             <video
+  //               ref={remoteVideoRef}
+  //               className={`w-full max-h-[840px] object-cover ${
+  //                 isConnected ? "" : "hidden"
+  //               }`}
+  //               autoPlay
+  //               playsInline
+  //             />
+  //             {!isCameraOn && (
+  //               <p className="text-gray-300 absolute">Camera is off</p>
+  //             )}
+  //             {!isConnected && (
+  //               <p className="text-gray-300 absolute">
+  //                 Waiting for connection...
+  //               </p>
+  //             )}
+  //           </div>
+
+  //           <div className="flex justify-center items-center p-4 bg-gray-800">
+  //             <Button onClick={toggleCamera}>
+  //               {isCameraOn ? <Camera /> : <CameraOff />}
+  //             </Button>
+  //             <Button onClick={toggleMic}>
+  //               {isMicOn ? <Mic /> : <MicOff />}
+  //             </Button>
+  //             <Button onClick={startCall} className="bg-green-500">
+  //               Start Call
+  //             </Button>
+  //             <Button onClick={hangUp} className="bg-red-500">
+  //               <PhoneOff />
+  //             </Button>
+  //           </div>
+  //         </div>
+
+  //         {/* Action Buttons */}
+  //         <div className="flex justify-end mt-6">
+  //           <Button variant="secondary" className="mr-2" onClick={handleClose}>
+  //             Cancel
+  //           </Button>
+  //           <Button
+  //             variant="primary"
+  //             // Trigger fetch on button click
+  //           >
+  //             Search
+  //           </Button>
+  //         </div>
+  //       </DialogContent>
+  //     </Dialog>
+  //   );
+  // };
+
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       {/* <VideoCall isOpen={isModalOpen} setIsOpen={setIsModalOpen} /> */}
@@ -607,6 +736,7 @@ const WebRTCComponent = () => {
             />
             <button onClick={sendMessage}>Send Message</button>
             <Button onClick={() => startCall(targetUser)}>Call</Button>
+            <Button onClick={openCallTab}>Call</Button>
           </>
         ) : (
           <p>Select a user to start chatting.</p>
