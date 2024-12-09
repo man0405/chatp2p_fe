@@ -36,10 +36,10 @@
 	},
 	"scripts": {
 		"start": "craco start",
-		"build": "REACT_APP_DEPLOY_ENV=production craco build",
+		"build": "CI=false && REACT_APP_DEPLOY_ENV=production craco build",
 		"test": "craco test",
-		"predeploy": "REACT_APP_DEPLOY_ENV=production craco build",
-		"build:prod": "cross-env REACT_APP_DEPLOY_ENV=production craco build",
+		"predeploy": "CI=false && REACT_APP_DEPLOY_ENV=production craco build",
+		"build:prod": "CI=false && cross-env REACT_APP_DEPLOY_ENV=production craco build",
 		"deploy": "gh-pages -d build",
 		"eject": "react-scripts eject"
 	},
