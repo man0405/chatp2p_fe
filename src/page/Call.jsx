@@ -37,7 +37,9 @@ export default function Call() {
 	];
 
 	useEffect(() => {
-		const params = new URLSearchParams(window.location.search);
+		// const params = new URLSearchParams(window.location.search);
+		const hashParams = window.location.hash.split("?")[1];
+		const params = new URLSearchParams(hashParams);
 		const usernameParam = params.get("username");
 		const targetUserParam = params.get("targetUser");
 
