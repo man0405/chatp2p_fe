@@ -17,15 +17,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: "20" # Specify your Node.js version
+          node-version: "20"
 
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      - name: Create env file
+        run: |
+          echo "SERVER_URL=${{ secrets.SERVER_URL }}" > .env.prod
+          echo "REACT_APP_DEPLOY_ENV=production" >> .env.prod
+          # Add other environment variables as needed
 
       - name: Install dependencies
         run: npm install
@@ -39,7 +37,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: production-files
-          path: ./build # Ensure this matches your build output
+          path: ./build
 
   deploy:
     name: Deploy
@@ -58,4 +56,3 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.CI_CD_TOKEN }}
-          publish_dir: ./build # Ensure this matches your build output
