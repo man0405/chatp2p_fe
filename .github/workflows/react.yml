@@ -25,11 +25,6 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-      - name: Create env file
-        run: |
-          echo "SERVER_URL=${{ secrets.SERVER_URL }}" > .env.prod
-          echo "REACT_APP_DEPLOY_ENV=production" >> .env.prod
-          # Add other environment variables as needed
       - run: npm ci
       - run: npm run build --if-present
       - run: npm test

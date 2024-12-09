@@ -1,7 +1,7 @@
 {
 	"name": "chatp2p_fe",
 	"version": "0.1.0",
-	"homepage": "https://man0405.github.io/chatp2p_fe/",
+	"homepage": "http://man0405.github.io/chatp2p_fe",
 	"private": true,
 	"dependencies": {
 		"@craco/craco": "^7.1.0",
