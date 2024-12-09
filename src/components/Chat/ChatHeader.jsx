@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Info, Phone, Search, Video } from "lucide-react";
 
-export default function ChatHeader({ userSelected }) {
+export default function ChatHeader({ userSelected, startCall }) {
 	return (
 		<div className="flex items-center justify-between p-2 border-b border-zinc-800">
 			<div className="flex items-center gap-3">
@@ -32,6 +32,7 @@ export default function ChatHeader({ userSelected }) {
 					variant="ghost"
 					size="icon"
 					className="text-zinc-400 hover:text-white"
+					onClick={() => startCall(userSelected.email)}
 				>
 					<Video className="w-5 h-5" />
 				</Button>

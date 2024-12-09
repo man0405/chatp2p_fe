@@ -159,6 +159,14 @@ export default function Component() {
 					`/topic/${username}/candidate`,
 					handleReceivedCandidate
 				);
+				client.subscribe(
+					`/topic/${username}/call-notification`,
+					handleCallNotification
+				);
+				client.subscribe(
+					`/topic/${username}/call-accepted`,
+					hanedleCallAccepted
+				);
 			},
 			onStompError: (frame) => {
 				console.error("STOMP error:", frame.headers["message"]);
@@ -217,7 +225,6 @@ export default function Component() {
 
 		dataChannel.onmessage = (event) => {
 			const data = JSON.parse(event.data);
-			console.log("startChat ~ message:", data);
 			setMessageHistory((prev) => ({
 				...prev,
 				[targetUser]: [
@@ -268,7 +275,6 @@ export default function Component() {
 
 		newPeerConnection.ondatachannel = (event) => {
 			const receiveChannel = event.channel;
-			console.log("startChat ~ receiveChannel:", receiveChannel);
 			dataChannels.set(targetUser, receiveChannel);
 			receiveChannel.onmessage = (event) => {
 				console.log(`Received message from ${targetUser}:`, event.data);
@@ -595,6 +601,79 @@ export default function Component() {
 		}
 	};
 
+	const startCall = async (targetUser) => {
+		console.log("startCall invoked with:", targetUser);
+		// Ensure targetUser is not an event object
+		if (targetUser && typeof targetUser !== "string") {
+			console.error("Invalid targetUser:", targetUser);
+			return;
+		}
+
+		// Avoid accidentally passing the event object
+		const callNotificationPayload = {
+			targetUser,
+			caller: usernameRef.current,
+		};
+
+		// Notify the target user about the call
+		clientRef.current.publish({
+			destination: `/app/call-notification`,
+			body: JSON.stringify(callNotificationPayload), // Ensure only serializable data
+		});
+		console.log(`Call notification sent to ${targetUser}`);
+	};
+
+	const openCallTab = (username, targetUser) => {
+		console.log("Opening call tab...");
+		const url = `/call?username=${encodeURIComponent(
+			username
+		)}&targetUser=${encodeURIComponent(targetUser)}`;
+		console.log("Opening URL:", url);
+
+		// Open a new tab or window
+		const newWindow = window.open(url, "_blank", "width=800,height=600");
+		if (!newWindow) {
+			console.error("Failed to open call tab. Check popup blockers.");
+		} else {
+			console.log("Call tab opened successfully.");
+		}
+	};
+
+	const hanedleCallAccepted = (message) => {
+		try {
+			const { targetUser } = JSON.parse(message.body);
+			console.log("message.body", message.body);
+
+			openCallTab(usernameRef.current, targetUser);
+		} catch (error) {
+			console.error("Error handling call acceptejd:", error);
+		}
+	};
+
+	const handleCallNotification = (message) => {
+		try {
+			const { caller, message: notification = "Incoming call" } = JSON.parse(
+				message.body
+			);
+			console.log(`Incoming call notification from ${caller}: ${notification}`);
+
+			const accept = window.confirm(`${caller} is calling you. Accept?`);
+			if (accept) {
+				console.log("Call accepted. Starting chat with:", caller);
+				openCallTab(usernameRef.current, caller);
+				clientRef.current.publish({
+					destination: `/app/call-accepted`,
+					body: JSON.stringify({
+						targetUser: caller,
+						sender: usernameRef.current,
+					}),
+				});
+			}
+		} catch (error) {
+			console.error("Error handling call notification:", error);
+		}
+	};
+
 	return (
 		<div className="flex h-screen dark">
 			{/* Icon Sidebar */}
@@ -618,7 +697,7 @@ export default function Component() {
 				{/* Main Chat Area */}
 				<div className="flex flex-col bg-zinc-900 overflow-auto">
 					{/* Chat Header */}
-					<ChatHeader userSelected={userSelected} />
+					<ChatHeader userSelected={userSelected} startCall={startCall} />
 					{/* Chat Messages */}
 					<ChatArea
 						messagesHistory={messageHistory[userSelected.email]}

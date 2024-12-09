@@ -13,7 +13,6 @@ export default function ListUser({
 	setUserSelected,
 	startChat,
 }) {
-	console.log("List User:", latestMessage, userSelected);
 	return (
 		<div className="bg-zinc-900 border-r border-zinc-800 h-screen overflow-hidden flex flex-col ">
 			<div className="p-4 border-zinc-800">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { Button } from "./components/ui/button";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -20,34 +21,34 @@ const WebRTCComponent = () => {
 	const dataChannels = useRef(new Map()).current;
 	const iceCandidatesQueue = useRef(new Map()).current;
 
-  const startCall = async (targetUser) => {
-    console.log("startCall invoked with:", targetUser);
-    // Ensure targetUser is not an event object
-    if (targetUser && typeof targetUser !== "string") {
-      console.error("Invalid targetUser:", targetUser);
-      return;
-    }
+	const startCall = async (targetUser) => {
+		console.log("startCall invoked with:", targetUser);
+		// Ensure targetUser is not an event object
+		if (targetUser && typeof targetUser !== "string") {
+			console.error("Invalid targetUser:", targetUser);
+			return;
+		}
 
-    // Avoid accidentally passing the event object
-    const callNotificationPayload = {
-      targetUser,
-      caller: username,
-    };
+		// Avoid accidentally passing the event object
+		const callNotificationPayload = {
+			targetUser,
+			caller: username,
+		};
 
-    // Notify the target user about the call
-    clientRef.current.publish({
-      destination: `/app/call-notification`,
-      body: JSON.stringify(callNotificationPayload), // Ensure only serializable data
-    });
-    console.log(`Call notification sent to ${targetUser}`);
-  };
+		// Notify the target user about the call
+		clientRef.current.publish({
+			destination: `/app/call-notification`,
+			body: JSON.stringify(callNotificationPayload), // Ensure only serializable data
+		});
+		console.log(`Call notification sent to ${targetUser}`);
+	};
 
-  const iceServers = [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-    // Add TURN servers here if necessary
-  ];
+	const iceServers = [
+		{ urls: "stun:stun.l.google.com:19302" },
+		{ urls: "stun:stun1.l.google.com:19302" },
+		{ urls: "stun:stun2.l.google.com:19302" },
+		// Add TURN servers here if necessary
+	];
 	// Ref to store the latest username
 	const usernameRef = useRef("");
 
@@ -93,7 +94,7 @@ const WebRTCComponent = () => {
 			debug: (str) => console.log("STOMP Debug:", str),
 			reconnectDelay: 5000,
 			onDisconnect: () => {
-        disconnect();
+				disconnect();
 				console.error("Disconnected from signaling server");
 				setIsConnected(false);
 			},
@@ -114,11 +115,11 @@ const WebRTCComponent = () => {
 				client.subscribe(`/topic/${user}/offer`, handleReceivedOffer);
 				client.subscribe(`/topic/${user}/answer`, handleReceivedAnswer);
 				client.subscribe(`/topic/${user}/candidate`, handleReceivedCandidate);
-        client.subscribe(
-          `/topic/${user}/call-notification`,
-          handleCallNotification
-        );
-        client.subscribe(`/topic/${user}/call-accepted`, hanedleCallAccepted);
+				client.subscribe(
+					`/topic/${user}/call-notification`,
+					handleCallNotification
+				);
+				client.subscribe(`/topic/${user}/call-accepted`, hanedleCallAccepted);
 			},
 			onStompError: (frame) => {
 				console.error("STOMP error:", frame.headers["message"]);
@@ -130,46 +131,46 @@ const WebRTCComponent = () => {
 		clientRef.current = client;
 	};
 
-  const hanedleCallAccepted = (message) => {
-    try {
-      const { targetUser } = JSON.parse(message.body);
-      console.log("message.body", message.body);
+	const hanedleCallAccepted = (message) => {
+		try {
+			const { targetUser } = JSON.parse(message.body);
+			console.log("message.body", message.body);
 
-      openCallTab(usernameRef.current, targetUser);
-    } catch (error) {
-      console.error("Error handling call acceptejd:", error);
-    }
-  };
+			openCallTab(usernameRef.current, targetUser);
+		} catch (error) {
+			console.error("Error handling call acceptejd:", error);
+		}
+	};
 
-  const handleCallNotification = (message) => {
-    try {
-      const { caller, message: notification = "Incoming call" } = JSON.parse(
-        message.body
-      );
-      console.log(`Incoming call notification from ${caller}: ${notification}`);
+	const handleCallNotification = (message) => {
+		try {
+			const { caller, message: notification = "Incoming call" } = JSON.parse(
+				message.body
+			);
+			console.log(`Incoming call notification from ${caller}: ${notification}`);
 
-      const accept = window.confirm(`${caller} is calling you. Accept?`);
-      if (accept) {
-        console.log("Call accepted. Starting chat with:", caller);
-        openCallTab(usernameRef.current, caller);
-        clientRef.current.publish({
-          destination: `/app/call-accepted`,
-          body: JSON.stringify({
-            targetUser: caller,
-            sender: usernameRef.current,
-          }),
-        });
-      }
-    } catch (error) {
-      console.error("Error handling call notification:", error);
-    }
-  };
+			const accept = window.confirm(`${caller} is calling you. Accept?`);
+			if (accept) {
+				console.log("Call accepted. Starting chat with:", caller);
+				openCallTab(usernameRef.current, caller);
+				clientRef.current.publish({
+					destination: `/app/call-accepted`,
+					body: JSON.stringify({
+						targetUser: caller,
+						sender: usernameRef.current,
+					}),
+				});
+			}
+		} catch (error) {
+			console.error("Error handling call notification:", error);
+		}
+	};
 
-  const startChat = async (targetUser) => {
-    if (peerConnections.has(targetUser)) {
-      console.warn(`Already connected to ${targetUser}`);
-      return;
-    }
+	const startChat = async (targetUser) => {
+		if (peerConnections.has(targetUser)) {
+			console.warn(`Already connected to ${targetUser}`);
+			return;
+		}
 
 		const newPeerConnection = new RTCPeerConnection({ iceServers });
 		peerConnections.set(targetUser, newPeerConnection);
@@ -257,9 +258,9 @@ const WebRTCComponent = () => {
 			const { offer, sender } = parsedMessage;
 			console.log(`Received offer from ${sender}:`, offer);
 
-      if (!peerConnections.has(sender)) {
-        const newPeerConnection = new RTCPeerConnection({ iceServers });
-        peerConnections.set(sender, newPeerConnection);
+			if (!peerConnections.has(sender)) {
+				const newPeerConnection = new RTCPeerConnection({ iceServers });
+				peerConnections.set(sender, newPeerConnection);
 
 				newPeerConnection.onicecandidate = (event) => {
 					if (event.candidate) {
@@ -475,239 +476,239 @@ const WebRTCComponent = () => {
 		}
 	};
 
-  const openCallTab = (username, targetUser) => {
-    console.log("Opening call tab...");
-    const url = `/call?username=${encodeURIComponent(
-      username
-    )}&targetUser=${encodeURIComponent(targetUser)}`;
-    console.log("Opening URL:", url);
+	const openCallTab = (username, targetUser) => {
+		console.log("Opening call tab...");
+		const url = `/call?username=${encodeURIComponent(
+			username
+		)}&targetUser=${encodeURIComponent(targetUser)}`;
+		console.log("Opening URL:", url);
 
-    // Open a new tab or window
-    const newWindow = window.open(url, "_blank", "width=800,height=600");
-    if (!newWindow) {
-      console.error("Failed to open call tab. Check popup blockers.");
-    } else {
-      console.log("Call tab opened successfully.");
-    }
-  };
+		// Open a new tab or window
+		const newWindow = window.open(url, "_blank", "width=800,height=600");
+		if (!newWindow) {
+			console.error("Failed to open call tab. Check popup blockers.");
+		} else {
+			console.log("Call tab opened successfully.");
+		}
+	};
 
-  const disconnect = () => {
-    if (clientRef.current) {
-      clientRef.current.publish({
-        destination: "/app/exit",
-        body: username,
-      });
-      console.log("WebSocket connection closed");
-    }
-  };
+	const disconnect = () => {
+		if (clientRef.current) {
+			clientRef.current.publish({
+				destination: "/app/exit",
+				body: username,
+			});
+			console.log("WebSocket connection closed");
+		}
+	};
 
-  // const VideoCall = ({ isOpen, setIsOpen }) => {
-  //   const [username, setUsername] = useState(this.username);
-  //   const [targetUser, setTargetUser] = useState(this.targetUser);
-  //   const [isCameraOn, setIsCameraOn] = useState(false);
-  //   const [isMicOn, setIsMicOn] = useState(false);
-  //   const [isConnected, setIsConnected] = useState(false);
-  //   const videoRef = useRef(null);
-  //   const remoteVideoRef = useRef(null);
-  //   const localStreamRef = useRef(null);
-  //   const remoteStreamRef = useRef(null);
-  //   const peerConnectionRef = useRef(null);
-  //   const clientRef = useRef(null);
+	// const VideoCall = ({ isOpen, setIsOpen }) => {
+	//   const [username, setUsername] = useState(this.username);
+	//   const [targetUser, setTargetUser] = useState(this.targetUser);
+	//   const [isCameraOn, setIsCameraOn] = useState(false);
+	//   const [isMicOn, setIsMicOn] = useState(false);
+	//   const [isConnected, setIsConnected] = useState(false);
+	//   const videoRef = useRef(null);
+	//   const remoteVideoRef = useRef(null);
+	//   const localStreamRef = useRef(null);
+	//   const remoteStreamRef = useRef(null);
+	//   const peerConnectionRef = useRef(null);
+	//   const clientRef = useRef(null);
 
-  //   const startCall = async () => {
-  //     try {
-  //       const stream = await navigator.mediaDevices.getUserMedia({
-  //         video: true,
-  //         audio: true,
-  //       });
+	//   const startCall = async () => {
+	//     try {
+	//       const stream = await navigator.mediaDevices.getUserMedia({
+	//         video: true,
+	//         audio: true,
+	//       });
 
-  //       localStreamRef.current = stream;
-  //       if (videoRef.current) {
-  //         videoRef.current.srcObject = stream;
-  //       }
+	//       localStreamRef.current = stream;
+	//       if (videoRef.current) {
+	//         videoRef.current.srcObject = stream;
+	//       }
 
-  //       const peerConnection = createPeerConnection();
-  //       peerConnectionRef.current = peerConnection;
+	//       const peerConnection = createPeerConnection();
+	//       peerConnectionRef.current = peerConnection;
 
-  //       stream.getTracks().forEach((track) => {
-  //         peerConnection.addTrack(track, stream);
-  //       });
+	//       stream.getTracks().forEach((track) => {
+	//         peerConnection.addTrack(track, stream);
+	//       });
 
-  //       const offer = await peerConnection.createOffer();
-  //       await peerConnection.setLocalDescription(offer);
+	//       const offer = await peerConnection.createOffer();
+	//       await peerConnection.setLocalDescription(offer);
 
-  //       console.log("Offer created and set:", offer);
-  //       console.log("Updated peerConnectionRef:", peerConnectionRef.current);
-  //     } catch (err) {
-  //       console.error("Error starting call:", err);
-  //     }
-  //   };
+	//       console.log("Offer created and set:", offer);
+	//       console.log("Updated peerConnectionRef:", peerConnectionRef.current);
+	//     } catch (err) {
+	//       console.error("Error starting call:", err);
+	//     }
+	//   };
 
-  //   useEffect(() => {
-  //     // Log state changes for username and targetUser
-  //     console.log("Updated username:", username);
-  //     console.log("Updated targetUser:", targetUser);
-  //   }, [username, targetUser]);
+	//   useEffect(() => {
+	//     // Log state changes for username and targetUser
+	//     console.log("Updated username:", username);
+	//     console.log("Updated targetUser:", targetUser);
+	//   }, [username, targetUser]);
 
-  //   const handleClose = () => {
-  //     setIsOpen(false); // Close the modal
-  //   };
+	//   const handleClose = () => {
+	//     setIsOpen(false); // Close the modal
+	//   };
 
-  //   return (
-  //     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-  //       <DialogContent className="w-full max-w-lg p-6">
-  //         <DialogTitle>Calling</DialogTitle>
+	//   return (
+	//     <Dialog open={isOpen} onOpenChange={setIsOpen}>
+	//       <DialogContent className="w-full max-w-lg p-6">
+	//         <DialogTitle>Calling</DialogTitle>
 
-  //         <div className="flex flex-col h-screen bg-gray-900">
-  //           <div className="flex-1 bg-black flex items-center justify-center relative">
-  //             <video
-  //               ref={videoRef}
-  //               className={`w-full max-h-[840px] object-cover ${
-  //                 isCameraOn ? "" : "hidden"
-  //               }`}
-  //               autoPlay
-  //               playsInline
-  //               muted
-  //             />
-  //             <video
-  //               ref={remoteVideoRef}
-  //               className={`w-full max-h-[840px] object-cover ${
-  //                 isConnected ? "" : "hidden"
-  //               }`}
-  //               autoPlay
-  //               playsInline
-  //             />
-  //             {!isCameraOn && (
-  //               <p className="text-gray-300 absolute">Camera is off</p>
-  //             )}
-  //             {!isConnected && (
-  //               <p className="text-gray-300 absolute">
-  //                 Waiting for connection...
-  //               </p>
-  //             )}
-  //           </div>
+	//         <div className="flex flex-col h-screen bg-gray-900">
+	//           <div className="flex-1 bg-black flex items-center justify-center relative">
+	//             <video
+	//               ref={videoRef}
+	//               className={`w-full max-h-[840px] object-cover ${
+	//                 isCameraOn ? "" : "hidden"
+	//               }`}
+	//               autoPlay
+	//               playsInline
+	//               muted
+	//             />
+	//             <video
+	//               ref={remoteVideoRef}
+	//               className={`w-full max-h-[840px] object-cover ${
+	//                 isConnected ? "" : "hidden"
+	//               }`}
+	//               autoPlay
+	//               playsInline
+	//             />
+	//             {!isCameraOn && (
+	//               <p className="text-gray-300 absolute">Camera is off</p>
+	//             )}
+	//             {!isConnected && (
+	//               <p className="text-gray-300 absolute">
+	//                 Waiting for connection...
+	//               </p>
+	//             )}
+	//           </div>
 
-  //           <div className="flex justify-center items-center p-4 bg-gray-800">
-  //             <Button onClick={toggleCamera}>
-  //               {isCameraOn ? <Camera /> : <CameraOff />}
-  //             </Button>
-  //             <Button onClick={toggleMic}>
-  //               {isMicOn ? <Mic /> : <MicOff />}
-  //             </Button>
-  //             <Button onClick={startCall} className="bg-green-500">
-  //               Start Call
-  //             </Button>
-  //             <Button onClick={hangUp} className="bg-red-500">
-  //               <PhoneOff />
-  //             </Button>
-  //           </div>
-  //         </div>
+	//           <div className="flex justify-center items-center p-4 bg-gray-800">
+	//             <Button onClick={toggleCamera}>
+	//               {isCameraOn ? <Camera /> : <CameraOff />}
+	//             </Button>
+	//             <Button onClick={toggleMic}>
+	//               {isMicOn ? <Mic /> : <MicOff />}
+	//             </Button>
+	//             <Button onClick={startCall} className="bg-green-500">
+	//               Start Call
+	//             </Button>
+	//             <Button onClick={hangUp} className="bg-red-500">
+	//               <PhoneOff />
+	//             </Button>
+	//           </div>
+	//         </div>
 
-  //         {/* Action Buttons */}
-  //         <div className="flex justify-end mt-6">
-  //           <Button variant="secondary" className="mr-2" onClick={handleClose}>
-  //             Cancel
-  //           </Button>
-  //           <Button
-  //             variant="primary"
-  //             // Trigger fetch on button click
-  //           >
-  //             Search
-  //           </Button>
-  //         </div>
-  //       </DialogContent>
-  //     </Dialog>
-  //   );
-  // };
+	//         {/* Action Buttons */}
+	//         <div className="flex justify-end mt-6">
+	//           <Button variant="secondary" className="mr-2" onClick={handleClose}>
+	//             Cancel
+	//           </Button>
+	//           <Button
+	//             variant="primary"
+	//             // Trigger fetch on button click
+	//           >
+	//             Search
+	//           </Button>
+	//         </div>
+	//       </DialogContent>
+	//     </Dialog>
+	//   );
+	// };
 
-  return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      {/* <VideoCall isOpen={isModalOpen} setIsOpen={setIsModalOpen} /> */}
-      {/* Left Panel: Active Users */}
-      <div
-        style={{ width: "25%", borderRight: "1px solid gray", padding: "10px" }}
-      >
-        <div className="flex justify-between">
-          <div>333</div>
-          <div>333</div>
-          <div>333</div>
-          <Button onClick={disconnect}>Close</Button>
-        </div>
-        <h3>Active Users</h3>
-        <ul>
-          {activeUsers
-            .filter((user) => user !== username)
-            .map((user) => (
-              <li
-                key={user}
-                onClick={() => {
-                  setTargetUser(user);
-                  startChat(user);
-                }}
-                style={{ cursor: "pointer", marginBottom: "10px" }}
-              >
-                {user}
-              </li>
-            ))}
-        </ul>
-      </div>
+	return (
+		<div style={{ display: "flex", height: "100vh" }}>
+			{/* <VideoCall isOpen={isModalOpen} setIsOpen={setIsModalOpen} /> */}
+			{/* Left Panel: Active Users */}
+			<div
+				style={{ width: "25%", borderRight: "1px solid gray", padding: "10px" }}
+			>
+				<div className="flex justify-between">
+					<div>333</div>
+					<div>333</div>
+					<div>333</div>
+					<Button onClick={disconnect}>Close</Button>
+				</div>
+				<h3>Active Users</h3>
+				<ul>
+					{activeUsers
+						.filter((user) => user !== username)
+						.map((user) => (
+							<li
+								key={user}
+								onClick={() => {
+									setTargetUser(user);
+									startChat(user);
+								}}
+								style={{ cursor: "pointer", marginBottom: "10px" }}
+							>
+								{user}
+							</li>
+						))}
+				</ul>
+			</div>
 
-      {/* Right Panel: Chat Box */}
-      <div style={{ flex: 1, padding: "10px" }}>
-        {!isAuthenticated ? (
-          <form onSubmit={handleLogin}>
-            <input
-              type="text"
-              placeholder="Enter email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button type="submit">Login</button>
-          </form>
-        ) : !isConnected ? (
-          <p>Connecting to signaling server...</p>
-        ) : targetUser ? (
-          <>
-            <h3>Chat with {targetUser}</h3>
-            <div
-              style={{
-                border: "1px solid gray",
-                height: "400px",
-                overflowY: "auto",
-                marginBottom: "10px",
-                padding: "10px",
-              }}
-            >
-              {messageHistory[targetUser] &&
-                messageHistory[targetUser].map((msg, index) => (
-                  <div key={index}>
-                    <strong>{msg.sender}:</strong> {msg.message}
-                  </div>
-                ))}
-            </div>
-            <input
-              type="text"
-              placeholder="Type a message"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-            />
-            <button onClick={sendMessage}>Send Message</button>
-            <Button onClick={() => startCall(targetUser)}>Call</Button>
-          </>
-        ) : (
-          <p>Select a user to start chatting.</p>
-        )}
-      </div>
-    </div>
-  );
+			{/* Right Panel: Chat Box */}
+			<div style={{ flex: 1, padding: "10px" }}>
+				{!isAuthenticated ? (
+					<form onSubmit={handleLogin}>
+						<input
+							type="text"
+							placeholder="Enter email"
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
+							required
+						/>
+						<input
+							type="password"
+							placeholder="Enter password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							required
+						/>
+						<button type="submit">Login</button>
+					</form>
+				) : !isConnected ? (
+					<p>Connecting to signaling server...</p>
+				) : targetUser ? (
+					<>
+						<h3>Chat with {targetUser}</h3>
+						<div
+							style={{
+								border: "1px solid gray",
+								height: "400px",
+								overflowY: "auto",
+								marginBottom: "10px",
+								padding: "10px",
+							}}
+						>
+							{messageHistory[targetUser] &&
+								messageHistory[targetUser].map((msg, index) => (
+									<div key={index}>
+										<strong>{msg.sender}:</strong> {msg.message}
+									</div>
+								))}
+						</div>
+						<input
+							type="text"
+							placeholder="Type a message"
+							value={newMessage}
+							onChange={(e) => setNewMessage(e.target.value)}
+						/>
+						<button onClick={sendMessage}>Send Message</button>
+						<Button onClick={() => startCall(targetUser)}>Call</Button>
+					</>
+				) : (
+					<p>Select a user to start chatting.</p>
+				)}
+			</div>
+		</div>
+	);
 };
 
 export default WebRTCComponent;
