@@ -6,7 +6,7 @@ import {
 	createHashRouter,
 	RouterProvider,
 } from "react-router-dom";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+
 import App from "./App";
 import Test from "./page/test";
 import LoginPage from "./page/Login";
