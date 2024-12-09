@@ -124,7 +124,7 @@ export default function Component() {
 		const username = localStorage.getItem("username");
 		usernameRef.current = username;
 		const client = new Client({
-			webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+			webSocketFactory: () => new SockJS(process.env.SERVER_URL + "/ws"),
 			connectHeaders: { Authorization: `Bearer ${token}` },
 			// debug: (str) => console.log("STOMP Debug:", str),
 			reconnectDelay: 5000,

@@ -52,7 +52,7 @@ export default function Call() {
 		console.log("Call started with:", { usernameParam, targetUserParam });
 
 		const client = new Client({
-			webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+			webSocketFactory: () => new SockJS(process.env.SERVER_URL + "/ws"),
 			connectHeaders: {
 				Authorization: `Bearer ${localStorage.getItem("token")}`,
 			},

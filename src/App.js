@@ -60,7 +60,7 @@ const WebRTCComponent = () => {
 	const handleLogin = async (e) => {
 		e.preventDefault();
 		try {
-			const response = await fetch("http://localhost:8080/auth/signin", {
+			const response = await fetch(process.env.SERVER_URL + "/auth/signin", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ email, password }),
@@ -89,7 +89,7 @@ const WebRTCComponent = () => {
 	// Connect to the signaling server with JWT
 	const connectToSignalingServer = (token, user) => {
 		const client = new Client({
-			webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+			webSocketFactory: () => new SockJS(process.env.SERVER_URL + "/ws"),
 			connectHeaders: { Authorization: `Bearer ${token}` },
 			debug: (str) => console.log("STOMP Debug:", str),
 			reconnectDelay: 5000,
