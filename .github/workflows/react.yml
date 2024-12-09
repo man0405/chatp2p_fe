@@ -20,22 +20,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js \${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: \${{ matrix.node-version }}
+          node-version: ${{ matrix.node-version }}
           cache: "npm"
-
       - run: npm ci
-
-      - name: Build without ESLint errors failing the build
-        run: npm run build --if-present 2>&1 | tee build.log
+      - run: npm run build --if-present 2>&1 | tee build.log
         env:
           ESLINT_NO_DEV_ERRORS: true
-
       - name: Deploy with gh-pages
         run: |
-          git remote set-url origin https://git:\${GITHUB_TOKEN}@github.com/\${GITHUB_REPOSITORY}.git
+          git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           npm run deploy -- -u "github-actions-bot <support+actions@github.com>"
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
