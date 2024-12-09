@@ -37,6 +37,12 @@ export default function Call() {
 	];
 
 	useEffect(() => {
+		if (isCallStarted) {
+			startCall();
+		}
+	}, [isCallStarted]);
+
+	useEffect(() => {
 		// const params = new URLSearchParams(window.location.search);
 		const hashParams = window.location.hash.split("?")[1];
 		const params = new URLSearchParams(hashParams);
@@ -238,7 +244,6 @@ export default function Call() {
 				await peerConnection.setRemoteDescription(
 					new RTCSessionDescription(answer)
 				);
-				startCall();
 				setIsConnected(true);
 				console.log("Set remote description with answer");
 			}
