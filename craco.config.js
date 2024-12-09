@@ -3,7 +3,7 @@ const path = require("path");
 const DotEnv = require("dotenv");
 const webpack = require("webpack");
 
-const ENV = process.env.DEPLOY_ENV || "dev";
+const ENV = process.env.REACT_APP_DEPLOY_ENV === "production" ? "prod" : "dev";
 const result = DotEnv.config({ path: `./.env.${ENV}` });
 
 if (result.error) {
