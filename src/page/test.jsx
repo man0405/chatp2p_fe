@@ -625,7 +625,7 @@ export default function Component() {
 
 	const openCallTab = (username, targetUser) => {
 		console.log("Opening call tab...");
-		const url = `/call?username=${encodeURIComponent(
+		const url = `/chatp2p_fe/#/call?username=${encodeURIComponent(
 			username
 		)}&targetUser=${encodeURIComponent(targetUser)}`;
 		console.log("Opening URL:", url);
