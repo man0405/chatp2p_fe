@@ -37,10 +37,10 @@ export default function Call() {
 	];
 
 	useEffect(() => {
-		if (isCallStarted) {
+		if (isConnected) {
 			startCall();
 		}
-	}, [isCallStarted]);
+	}, [isConnected]);
 
 	useEffect(() => {
 		// const params = new URLSearchParams(window.location.search);
