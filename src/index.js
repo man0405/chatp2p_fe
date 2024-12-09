@@ -13,7 +13,7 @@ import LoginPage from "./page/Login";
 import RegisterPage from "./page/Register";
 import Call from "./page/Call";
 
-const router = createBrowserRouter([
+const router = createHashRouter([
 	{
 		path: "/",
 		element: <App />,
