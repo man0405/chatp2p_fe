@@ -238,6 +238,7 @@ export default function Call() {
 				await peerConnection.setRemoteDescription(
 					new RTCSessionDescription(answer)
 				);
+				startCall();
 				setIsConnected(true);
 				console.log("Set remote description with answer");
 			}
