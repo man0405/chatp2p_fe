@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - develop
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -21,6 +25,8 @@ jobs:
         uses: bahmutov/npm-install@v1
 
       - name: Build project
+        env:
+          DEPLOY_ENV: prod
         run: npm run build
 
       - name: Upload production-ready build files
