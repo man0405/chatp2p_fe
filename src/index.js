@@ -6,13 +6,14 @@ import {
 	createHashRouter,
 	RouterProvider,
 } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
 import Test from "./page/test";
 import LoginPage from "./page/Login";
 import RegisterPage from "./page/Register";
 import Call from "./page/Call";
 
-const router = createHashRouter([
+const router = createBrowserRouter([
 	{
 		path: "/",
 		element: <App />,
