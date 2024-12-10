@@ -15,13 +15,16 @@ export function MessageInput({ sendMessage, sendFile }) {
   };
 
   const handleFileClick = () => {
-    fileInputRef.current.click(); // Trigger the hidden file input
+    fileInputRef.current.click();
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files[0]; // Get the selected file
     if (file) {
+      console.log("Selected file:", file); // Debug: Log the selected file
       sendFile(file); // Send the file using the sendFile function
+    } else {
+      console.error("No file selected."); // Debug: Log if no file is selected
     }
   };
 

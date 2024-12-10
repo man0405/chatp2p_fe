@@ -9,6 +9,7 @@ import { MessageInput } from "@/components/Chat/MessageInput";
 import { ChatArea } from "@/components/Chat/ChatArea";
 import ChatHeader from "@/components/Chat/ChatHeader";
 import { getToken } from "@/services/token.service";
+import axiosClient from "@/lib/axios/axiosClient";
 import {
   storeMessageHistory,
   getMessageHistory,
@@ -225,26 +226,64 @@ export default function Component() {
 
     dataChannel.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      setMessageHistory((prev) => ({
-        ...prev,
-        [targetUser]: [
-          ...(prev[targetUser] || []),
-          { sender: targetUser, message: data.message, type: data.type },
-        ],
-      }));
-      storeMessageHistory({
-        sender: targetUser,
-        message: data.message,
-        type: data.type,
-        keys: targetUser,
-      });
-      storeLeastMessageHandler({
-        keys: targetUser,
-        message: data.message,
-        type: data.type,
-        fullName: data.fullName,
-        publicKey: data.publicKey,
-      });
+
+      if (data.type === "file") {
+        // If the message is a file, populate the message with a description
+        const messageText = `File received: ${data.fileName}`;
+
+        setMessageHistory((prev) => ({
+          ...prev,
+          [targetUser]: [
+            ...(prev[targetUser] || []),
+            {
+              sender: targetUser,
+              message: messageText,
+              type: "file",
+              fileName: data.fileName,
+              downloadUrl: data.downloadUrl,
+            },
+          ],
+        }));
+
+        storeMessageHistory({
+          sender: targetUser,
+          message: messageText, // Use descriptive message here
+          type: "file",
+          keys: targetUser,
+        });
+
+        storeLeastMessageHandler({
+          keys: targetUser,
+          message: messageText, // Updated message text for file
+          type: "file",
+          fullName: data.fullName,
+          publicKey: data.publicKey,
+        });
+      } else {
+        // Handle normal text messages
+        setMessageHistory((prev) => ({
+          ...prev,
+          [targetUser]: [
+            ...(prev[targetUser] || []),
+            { sender: targetUser, message: data.message, type: data.type },
+          ],
+        }));
+
+        storeMessageHistory({
+          sender: targetUser,
+          message: data.message,
+          type: data.type,
+          keys: targetUser,
+        });
+
+        storeLeastMessageHandler({
+          keys: targetUser,
+          message: data.message,
+          type: data.type,
+          fullName: data.fullName,
+          publicKey: data.publicKey,
+        });
+      }
     };
 
     // Peer Connection Event Handlers
@@ -605,79 +644,76 @@ export default function Component() {
     if (userSelected.email && dataChannels.has(userSelected.email)) {
       const dataChannel = dataChannels.get(userSelected.email);
 
-      // Create FormData to send the file
+      // Prepare the file data
       const formData = new FormData();
       formData.append("file", file);
 
-      // Retrieve the token (e.g., from localStorage or context)
-      const token = getToken(); // Replace with your token retrieval logic
-
+      const token = getToken();
       if (!token) {
         console.error("No authorization token found.");
         return;
       }
 
       try {
-        // Upload file to the backend using axiosClient
+        // Upload file to the backend
         const response = await axiosClient.post("/file/upload", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`, // Include the token
+            Authorization: `Bearer ${token}`,
           },
         });
 
-        // Extract the file name from the response
-        const fileName = response.data; // Assuming API returns the file name directly
-        console.log(`File uploaded successfully with name: ${fileName}`);
+        // Extract the file details
+        const fileName = response; // Adjust according to API response
+        console.log(
+          `File uploaded: ${fileName}, URL: /file/upload/${fileName}`
+        );
+        const downloadUrl = `/file/upload/${fileName}`;
 
         if (dataChannel.readyState === "open") {
-          // Prepare file message metadata
-          const fileMessage = {
+          const message = {
             type: "file",
+            message: `File sent: ${fileName}`, // Adding message for file
             fileName,
-            downloadUrl: `/file/download/${fileName}`, // Construct the download URL
+            downloadUrl,
             fullName: fullName.current,
             publicKey: publicKey.current,
           };
 
-          // Send file metadata via data channel
-          dataChannel.send(JSON.stringify(fileMessage));
+          // Send metadata via the data channel
+          dataChannel.send(JSON.stringify(message));
 
-          // Update message history with the file message
+          // Update the UI
           setMessageHistory((prev) => ({
             ...prev,
             [userSelected.email]: [
               ...(prev[userSelected.email] || []),
-              { sender: usernameRef.current, ...fileMessage },
+              { sender: usernameRef.current, ...message },
             ],
           }));
 
           storeMessageHistory({
             sender: usernameRef.current,
-            ...fileMessage,
+            ...message,
             keys: userSelected.email,
           });
 
           storeLeastMessageHandler({
             keys: userSelected.email,
-            message: `File sent: ${fileName}`,
+            message: message.message, // Use descriptive message here
             type: "file",
             fullName: userSelected.fullName,
             publicKey: userSelected.publicKey,
           });
-        } else if (dataChannel.readyState === "connecting") {
-          console.log("Data channel is still connecting. Please wait.");
-          setTimeout(() => sendFile(file), 1000); // Retry after 1 second
         } else {
-          console.error(
-            "Data channel is not open or does not exist. Cannot send file metadata."
-          );
+          console.log("Data channel is not ready. Retrying...");
+          setTimeout(() => sendFile(file), 1000);
         }
       } catch (error) {
-        console.error("Error while uploading file:", error.message);
+        console.error("File upload error:", error.message);
       }
     } else {
-      console.error("No data channel found for the target user.");
+      console.error("No data channel available for the target user.");
     }
   };
 
