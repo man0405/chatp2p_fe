@@ -227,6 +227,8 @@ export default function Component() {
     dataChannel.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
+      console.log("data", data);
+
       if (data.type === "file") {
         // If the message is a file, populate the message with a description
         const messageText = `File received: ${data.fileName}`;
@@ -247,8 +249,7 @@ export default function Component() {
 
         storeMessageHistory({
           sender: targetUser,
-          message: messageText, // Use descriptive message here
-          type: "file",
+          ...data,
           keys: targetUser,
         });
 
@@ -257,6 +258,7 @@ export default function Component() {
           message: messageText, // Updated message text for file
           type: "file",
           fullName: data.fullName,
+          downloadUrl: data.downloadUrl,
           publicKey: data.publicKey,
         });
       } else {
@@ -323,21 +325,17 @@ export default function Component() {
           ...prev,
           [targetUser]: [
             ...(prev[targetUser] || []),
-            { sender: targetUser, message: data.message, type: data.type },
+            { sender: targetUser, ...data },
           ],
         }));
         storeMessageHistory({
           sender: targetUser,
-          message: data.message,
-          type: data.type,
+          ...data,
           keys: targetUser,
         });
         storeLeastMessageHandler({
           keys: targetUser,
-          message: data.message,
-          type: data.type,
-          fullName: data.fullName,
-          publicKey: data.publicKey,
+          ...data,
         });
       };
     };
@@ -402,15 +400,11 @@ export default function Component() {
             console.log(`Received message from ${sender}:`, data);
             setMessageHistory((prev) => ({
               ...prev,
-              [sender]: [
-                ...(prev[sender] || []),
-                { sender, message: data.message, type: data.type },
-              ],
+              [sender]: [...(prev[sender] || []), { sender, ...data }],
             }));
             storeMessageHistory({
               sender,
-              message: data.message,
-              type: data.type,
+              ...data,
               keys: sender,
             });
             storeLeastMessageHandler({
@@ -666,9 +660,9 @@ export default function Component() {
         // Extract the file details
         const fileName = response; // Adjust according to API response
         console.log(
-          `File uploaded: ${fileName}, URL: /file/upload/${fileName}`
+          `File uploaded: ${fileName}, URL: /file/download/${fileName}`
         );
-        const downloadUrl = `/file/upload/${fileName}`;
+        const downloadUrl = `/file/download/${fileName}`;
 
         if (dataChannel.readyState === "open") {
           const message = {
@@ -691,6 +685,8 @@ export default function Component() {
               { sender: usernameRef.current, ...message },
             ],
           }));
+
+          console.log("sent messsage", message);
 
           storeMessageHistory({
             sender: usernameRef.current,

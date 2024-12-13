@@ -2,6 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect, useRef } from "react";
 import { scrollToBottom } from "@/utils/scrollToBottom";
 import { getToken } from "@/services/token.service";
+import axiosClient from "@/lib/axios/axiosClient";
 
 export function ChatArea({ messagesHistory, username }) {
   const scrollBotton = useRef();
@@ -13,22 +14,20 @@ export function ChatArea({ messagesHistory, username }) {
   }, [messagesHistory]);
 
   // Function to handle file link click
-  const handleFileClick = async (url) => {
+  const handleFileClick = async (msg) => {
     try {
-      console.log(`Fetching file from: ${url}`);
-      const response = await fetch(url, {
+      console.log(`Fetching file for: ${msg.fileName}`);
+      const response = await axiosClient.get(msg.downloadUrl, {
         headers: {
-          Authorization: `Bearer ${getToken()}`, // Replace with your token retrieval logic
+          Authorization: `Bearer ${getToken()}`,
         },
+        responseType: "blob", // To handle file data as a blob
       });
-      if (!response.ok) {
-        throw new Error("Failed to fetch file details");
-      }
-      const fileBlob = await response.blob();
-      const downloadUrl = URL.createObjectURL(fileBlob);
+
+      const downloadUrl = URL.createObjectURL(response);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = url.split("/").pop(); // Extract the file name
+      a.download = msg.fileName || "downloaded_file";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -49,19 +48,15 @@ export function ChatArea({ messagesHistory, username }) {
             }`}
           >
             <div
-              className={`${
+              className={`$${
                 msg.sender === username
                   ? "bg-blue-600 text-white"
                   : "bg-zinc-800 text-zinc-200"
               } rounded-2xl px-4 py-2 max-w-[80%]`}
             >
               {msg.type === "file" ? (
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleFileClick(msg.downloadUrl);
-                  }}
+                <span
+                  onClick={() => handleFileClick(msg)}
                   style={{
                     color: "white",
                     textDecoration: "underline",
@@ -69,7 +64,7 @@ export function ChatArea({ messagesHistory, username }) {
                   }}
                 >
                   {msg.fileName || "Download File"}
-                </a>
+                </span>
               ) : (
                 <p>{msg.message}</p>
               )}
