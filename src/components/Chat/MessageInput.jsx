@@ -8,8 +8,14 @@ export function MessageInput({ sendMessage }) {
 
 	const handleSend = () => {
 		if (message.trim()) {
-			sendMessage(message, "text");
+			sendMessage(message, "text", new Date().toISOString());
 			setMessage("");
+		}
+	};
+
+	const handleKeyPress = (e) => {
+		if (e.key === "Enter" && message.trim()) {
+			handleSend();
 		}
 	};
 
@@ -34,6 +40,7 @@ export function MessageInput({ sendMessage }) {
 					<Input
 						value={message}
 						onChange={(e) => setMessage(e.target.value)}
+						onKeyPress={handleKeyPress}
 						placeholder="Type a message..."
 						className="border-0 bg-transparent focus-visible:ring-0 text-zinc-200 placeholder:text-zinc-400"
 					/>

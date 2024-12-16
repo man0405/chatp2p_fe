@@ -95,6 +95,7 @@ export default function Component() {
 				message,
 				type,
 				fullName,
+				timestamp: Date.now(),
 				publicKey,
 			};
 			const index = prev.findIndex((item) => item.keys === keys);
@@ -548,22 +549,14 @@ export default function Component() {
 	const sendMessage = (message, type) => {
 		if (userSelected.email && dataChannels.has(userSelected.email)) {
 			const dataChannel = dataChannels.get(userSelected.email);
-			console.log(`Sent message to ${userSelected.email}:`, message);
-			console.log(
-				"sendMessage ~ dataChannel.readyState:",
-				JSON.stringify({
-					message: message,
-					type: type,
-					fullName: fullName.current,
-					publicKey: publicKey.current,
-				})
-			);
+			const timestamp = new Date().toISOString();
 
 			if (dataChannel.readyState === "open") {
 				dataChannel.send(
 					JSON.stringify({
 						message: message,
 						type: type,
+						timestamp: timestamp,
 						fullName: fullName.current,
 						publicKey: publicKey.current,
 					})
@@ -572,19 +565,26 @@ export default function Component() {
 					...prev,
 					[userSelected.email]: [
 						...(prev[userSelected.email] || []),
-						{ sender: usernameRef.current, message: message, type: type },
+						{
+							sender: usernameRef.current,
+							message: message,
+							type: type,
+							timestamp: timestamp,
+						},
 					],
 				}));
 				storeMessageHistory({
 					sender: usernameRef.current,
 					message,
 					type,
+					timestamp,
 					keys: userSelected.email,
 				});
 				storeLeastMessageHandler({
 					keys: userSelected.email,
 					message,
 					type,
+					timestamp,
 					fullName: userSelected.fullName,
 					publicKey: userSelected.publicKey,
 				});
