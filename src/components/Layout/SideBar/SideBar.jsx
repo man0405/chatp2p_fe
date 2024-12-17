@@ -7,8 +7,7 @@ import {
 	Globe,
 	DatabaseBackup,
 	LogOut,
-	Monitor,
-	Moon,
+	UserRoundCog,
 	Settings2,
 	User,
 } from "lucide-react";
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 
 import Backup from "@/components/Preference/Backup";
+import AccountSetting from "@/components/Preference/AccountSetting";
 
 const settingsOptions = [
 	{
@@ -42,9 +42,10 @@ const settingsOptions = [
 		label: "Notifications",
 	},
 	{
-		icon: Moon,
-		label: "Appearance",
-		description: "Mirror system preferences",
+		icon: UserRoundCog,
+		label: "Account settings",
+		description: "Privacy and security",
+		components: <AccountSetting />,
 	},
 	{
 		icon: Globe,
@@ -56,10 +57,6 @@ const settingsOptions = [
 		label: "Back Up",
 		description: "Back up your data",
 		components: <Backup />,
-	},
-	{
-		icon: Monitor,
-		label: "Mini view",
 	},
 	{
 		icon: LogOut,

@@ -18,6 +18,7 @@ import {
 } from "@/services/message.service";
 import { debounce } from "@/utils/debounce";
 import { getStoredKeys } from "@/utils/rsa";
+import { Toaster } from "@/components/ui/toaster";
 
 const sidebarItems = [
   { icon: Grid, label: "Dashboard" },
@@ -63,6 +64,7 @@ export default function Component() {
       }
     };
     getKeys();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -96,6 +98,7 @@ export default function Component() {
         message,
         type,
         fullName,
+				timestamp: Date.now(),
         publicKey,
       };
       const index = prev.findIndex((item) => item.keys === keys);
@@ -875,34 +878,37 @@ export default function Component() {
         fullName={fullName.current}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 grid" style={{ gridTemplateColumns: "360px 1fr" }}>
-        {/* Left Sidebar */}
-        <ListUser
-          latestMessage={latestMessage}
-          userSelected={userSelected}
-          setUserSelected={setUserSelected}
-          activeUsers={activeUsers}
-          startChat={startChat}
-        />
-        {/* Main Chat Area */}
-        <div className="flex flex-col bg-zinc-900 overflow-auto">
-          {/* Chat Header */}
-          <ChatHeader userSelected={userSelected} startCall={startCall} />
-          {/* Chat Messages */}
-          <ChatArea
-            messagesHistory={messageHistory[userSelected.email]}
-            username={usernameRef.current}
-          />
+	      {/* Main Content */}
+	      <div
+					className="flex-1 grid"
+					style={{ gridTemplateColumns: "360px 1fr" }}
+				>
+	        {/* Left Sidebar */}
+	        <ListUser
+	          latestMessage={latestMessage}
+	          userSelected={userSelected}
+	          setUserSelected={setUserSelected}
+	          activeUsers={activeUsers}
+	          startChat={startChat}
+	        />
+	        {/* Main Chat Area */}
+	        <div className="flex flex-col bg-zinc-900 overflow-auto">
+	          {/* Chat Header */}
+	          <ChatHeader userSelected={userSelected} startCall={startCall} />
+	          {/* Chat Messages */}
+	          <ChatArea
+	            messagesHistory={messageHistory[userSelected.email]}
+	            username={usernameRef.current}
+	          />
 
-          {/* Message Input */}
-          <MessageInput
+	          {/* Message Input */}
+	          <MessageInput
             sendMessage={sendMessage}
             sendFile={sendFile}
             sendImage={sendImage}
           />
-        </div>
-      </div>
-    </div>
+	        </div>
+	      </div>
+	    </div>
   );
 }
