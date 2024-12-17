@@ -1,6 +1,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect, useRef } from "react";
 import { scrollToBottom } from "@/utils/scrollToBottom";
+import IconLoader from "../Utils/IconLoader";
 
 export function ChatArea({ messagesHistory, username }) {
 	console.log("ChatArea ~ username:", username);
@@ -28,7 +29,11 @@ export function ChatArea({ messagesHistory, username }) {
 									: "bg-zinc-800 text-zinc-200"
 							} rounded-2xl px-4 py-2 max-w-[80%]`}
 						>
-							<p>{msg.message}</p>
+							{msg.type === "icons" ? (
+								<IconLoader name={msg.message} className="w-6 h-6" />
+							) : (
+								<p>{msg.message}</p>
+							)}
 						</div>
 					</div>
 				))}
