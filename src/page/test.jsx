@@ -713,6 +713,85 @@ export default function Component() {
     }
   };
 
+  const sendImage = async (imageFile) => {
+    if (userSelected.email && dataChannels.has(userSelected.email)) {
+      const dataChannel = dataChannels.get(userSelected.email);
+
+      // Prepare the image data
+      const formData = new FormData();
+      formData.append("file", imageFile);
+
+      const token = getToken();
+      if (!token) {
+        console.error("No authorization token found.");
+        return;
+      }
+
+      try {
+        // Upload image to the backend
+        const response = await axiosClient.post("/file/upload", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Extract the image details
+        const imageName = response; // Adjust according to API response
+        console.log(
+          `Image uploaded: ${imageName}, URL: /file/download/${imageName}`
+        );
+        const downloadUrl = `/file/download/${imageName}`;
+
+        if (dataChannel.readyState === "open") {
+          const message = {
+            type: "image",
+            message: `Image sent: ${imageName}`, // Adding message for image
+            imageName,
+            downloadUrl,
+            fullName: fullName.current,
+            publicKey: publicKey.current,
+          };
+
+          // Send metadata via the data channel
+          dataChannel.send(JSON.stringify(message));
+
+          // Update the UI
+          setMessageHistory((prev) => ({
+            ...prev,
+            [userSelected.email]: [
+              ...(prev[userSelected.email] || []),
+              { sender: usernameRef.current, ...message },
+            ],
+          }));
+
+          console.log("Sent image message:", message);
+
+          storeMessageHistory({
+            sender: usernameRef.current,
+            ...message,
+            keys: userSelected.email,
+          });
+
+          storeLeastMessageHandler({
+            keys: userSelected.email,
+            message: message.message, // Use descriptive message here
+            type: "image",
+            fullName: userSelected.fullName,
+            publicKey: userSelected.publicKey,
+          });
+        } else {
+          console.log("Data channel is not ready. Retrying...");
+          setTimeout(() => sendImage(imageFile), 1000);
+        }
+      } catch (error) {
+        console.error("Image upload error:", error.message);
+      }
+    } else {
+      console.error("No data channel available for the target user.");
+    }
+  };
+
   const startCall = async (targetUser) => {
     console.log("startCall invoked with:", targetUser);
     // Ensure targetUser is not an event object
@@ -817,7 +896,11 @@ export default function Component() {
           />
 
           {/* Message Input */}
-          <MessageInput sendMessage={sendMessage} sendFile={sendFile} />
+          <MessageInput
+            sendMessage={sendMessage}
+            sendFile={sendFile}
+            sendImage={sendImage}
+          />
         </div>
       </div>
     </div>

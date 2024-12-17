@@ -52,7 +52,7 @@ export const getMessageHistory = async (keys) => {
 
     await tx.done;
 
-    messages.sort((a, b) => b.timestamp - a.timestamp);
+    messages.sort((a, b) => -b.timestamp + a.timestamp);
 
     return messages.map((msg) => {
       if (msg.type === "file" && msg.file) {

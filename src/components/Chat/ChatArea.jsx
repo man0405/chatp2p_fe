@@ -3,6 +3,8 @@ import { useEffect, useRef } from "react";
 import { scrollToBottom } from "@/utils/scrollToBottom";
 import { getToken } from "@/services/token.service";
 import axiosClient from "@/lib/axios/axiosClient";
+import FilePreview from "./FilePreview";
+import ImagePreview from "./ImagePreview";
 
 export function ChatArea({ messagesHistory, username }) {
   const scrollBotton = useRef();
@@ -55,16 +57,15 @@ export function ChatArea({ messagesHistory, username }) {
               } rounded-2xl px-4 py-2 max-w-[80%]`}
             >
               {msg.type === "file" ? (
-                <span
-                  onClick={() => handleFileClick(msg)}
-                  style={{
-                    color: "white",
-                    textDecoration: "underline",
-                    cursor: "pointer",
-                  }}
-                >
-                  {msg.fileName || "Download File"}
-                </span>
+                <FilePreview
+                  fileName={msg.fileName}
+                  onDownload={handleFileClick.bind(null, msg)}
+                />
+              ) : (
+                <p>{msg.message}</p>
+              )}
+              {msg.type === "image" ? (
+                <ImagePreview downloadUrl={msg.downloadUrl} />
               ) : (
                 <p>{msg.message}</p>
               )}
