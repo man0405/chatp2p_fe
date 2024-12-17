@@ -10,6 +10,8 @@ export function MessageInput({ sendMessage }) {
 		if (message.trim()) {
 			sendMessage(message, "text", new Date().toISOString());
 			setMessage("");
+		} else {
+			sendMessage("ThumbsUp", "icons", new Date().toISOString());
 		}
 	};
 
