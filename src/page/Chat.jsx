@@ -25,13 +25,10 @@ const sidebarItems = [
 	{ icon: Archive, label: "Archive" },
 ];
 
-export default function Component() {
-	const [selectedSidebarItem, setSelectedSidebarItem] = useState(1);
-
+export default function Component({ userSelected, setUserSelected }) {
 	// Handler socket and signaling
 	const [activeUsers, setActiveUsers] = useState([]);
 	const [messageHistory, setMessageHistory] = useState({});
-	const [userSelected, setUserSelected] = useState({});
 	const [latestMessage, setLatestMessage] = useState([]);
 
 	const usernameRef = useRef("");

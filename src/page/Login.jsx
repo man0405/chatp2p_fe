@@ -75,7 +75,7 @@ export default function LoginPage() {
         setToken(response.data.token);
         localStorage.setItem("fullName", response.data.fullName);
         localStorage.setItem("username", formData.email);
-        navigate("/test");
+        navigate("/");
         return;
       } else {
         setErrors({
