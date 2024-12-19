@@ -1,0 +1,896 @@
+import SideBar from "@/components/Layout/SideBar/SideBar";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+
+import { Archive, BookUser, MessageCircle } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import ListUser from "@/components/Chat/ListUser";
+import { MessageInput } from "@/components/Chat/MessageInput";
+import { ChatArea } from "@/components/Chat/ChatArea";
+import ChatHeader from "@/components/Chat/ChatHeader";
+import { getToken } from "@/services/token.service";
+import axiosClient from "@/lib/axios/axiosClient";
+import {
+	storeMessageHistory,
+	getMessageHistory,
+	storeLatestMessage,
+	getLatestMessages,
+} from "@/services/message.service";
+import { debounce } from "@/utils/debounce";
+import { getStoredKeys } from "@/utils/rsa";
+
+const sidebarItems = [
+	{ icon: MessageCircle, label: "Messages", hasNotification: true },
+	{ icon: BookUser, label: "Friend" },
+	{ icon: Archive, label: "Archive" },
+];
+
+export default function Component({ userSelected, setUserSelected }) {
+	// Handler socket and signaling
+	const [activeUsers, setActiveUsers] = useState([]);
+	const [messageHistory, setMessageHistory] = useState({});
+	const [latestMessage, setLatestMessage] = useState([]);
+
+	const usernameRef = useRef("");
+	const fullName = useRef(localStorage.getItem("fullName"));
+	const publicKey = useRef("");
+
+	const clientRef = useRef(null);
+	const peerConnections = useRef(new Map()).current;
+	const dataChannels = useRef(new Map()).current;
+	const iceCandidatesQueue = useRef(new Map()).current;
+
+	const disconnect = () => {
+		if (clientRef.current) {
+			clientRef.current.publish({
+				destination: "/app/exit",
+				body: usernameRef.current,
+			});
+			console.log("WebSocket connection closed");
+		}
+	};
+
+	// Connect to the signaling server
+	useEffect(() => {
+		connectToSignalingServer();
+		const getKeys = async () => {
+			const keys = await getStoredKeys();
+			if (keys) {
+				publicKey.current = keys.publicKey;
+			}
+		};
+		getKeys();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	useEffect(() => {
+		getLatestMessages().then((messages) => {
+			setLatestMessage(messages);
+		});
+	}, []);
+
+	// Debounce the create / update latest message
+	const storeLeastMessageHandler = ({
+		keys,
+		message,
+		type,
+		fullName,
+		publicKey,
+	}) => {
+		console.log(
+			"storeLeastMessageHandler ~ keys:",
+			keys,
+			message,
+			type,
+			fullName
+		);
+		debounce(
+			storeLatestMessage({ keys, message, type, fullName, publicKey }),
+			1000
+		);
+		setLatestMessage((prev) => {
+			const newMessage = {
+				keys,
+				message,
+				type,
+				fullName,
+				timestamp: Date.now(),
+				publicKey,
+			};
+			const index = prev.findIndex((item) => item.keys === keys);
+			if (index === -1) {
+				return [newMessage, ...prev];
+			} else {
+				const newMessages = [...prev];
+				newMessages[index] = newMessage;
+				return newMessages;
+			}
+		});
+	};
+
+	useEffect(() => {
+		if (userSelected.email) {
+			getMessageHistory(userSelected.email).then((messages) => {
+				setMessageHistory((prev) => ({
+					...prev,
+					[userSelected.email]: messages,
+				}));
+			});
+		}
+	}, [userSelected]);
+
+	const connectToSignalingServer = () => {
+		const token = getToken();
+		const username = localStorage.getItem("username");
+		usernameRef.current = username;
+		const client = new Client({
+			webSocketFactory: () => new SockJS(process.env.SERVER_URL + "/ws"),
+			connectHeaders: { Authorization: `Bearer ${token}` },
+			// debug: (str) => console.log("STOMP Debug:", str),
+			reconnectDelay: 5000,
+			onDisconnect: () => {
+				disconnect();
+				console.error("Disconnected from signaling server");
+			},
+			onConnect: () => {
+				console.log("Connected to signaling server");
+
+				client.subscribe("/topic/users", (message) => {
+					// setActiveUsers(JSON.parse(message.body));
+				});
+
+				client.subscribe("/user/queue/active-friends", function (message) {
+					const activeFriends = JSON.parse(message.body);
+					setActiveUsers([...activeFriends]); // it doesnt set data here
+
+					// Update the UI with the active friends
+					// updateActiveFriendsUI(activeFriends);
+				});
+
+				client.publish({
+					destination: "/app/register",
+					body: username,
+				});
+
+				// Subscribe to the user-specific topics for signaling
+				client.subscribe(`/topic/${username}/offer`, handleReceivedOffer);
+				client.subscribe(`/topic/${username}/answer`, handleReceivedAnswer);
+				client.subscribe(
+					`/topic/${username}/candidate`,
+					handleReceivedCandidate
+				);
+				client.subscribe(
+					`/topic/${username}/call-notification`,
+					handleCallNotification
+				);
+				client.subscribe(
+					`/topic/${username}/call-accepted`,
+					hanedleCallAccepted
+				);
+			},
+			onStompError: (frame) => {
+				console.error("STOMP error:", frame.headers["message"]);
+				console.error("Detailed error:", frame.body);
+			},
+		});
+
+		client.activate();
+		clientRef.current = client;
+	};
+
+	const startChat = async (targetUser) => {
+		if (peerConnections.has(targetUser)) {
+			console.warn(`Already connected to ${targetUser}`);
+			return;
+		}
+
+		const iceServers = [
+			{ urls: "stun:stun.l.google.com:19302" },
+			{ urls: "stun:stun.l.google.com:5349" },
+			{ urls: "stun:stun1.l.google.com:3478" },
+			{ urls: "stun:stun1.l.google.com:5349" },
+			{ urls: "stun:stun2.l.google.com:19302" },
+			{ urls: "stun:stun2.l.google.com:5349" },
+			{ urls: "stun:stun3.l.google.com:3478" },
+			{ urls: "stun:stun3.l.google.com:5349" },
+			{ urls: "stun:stun4.l.google.com:19302" },
+			{ urls: "stun:stun4.l.google.com:5349" },
+			{
+				urls: "turn:relay1.expressturn.com:3478",
+				username: "efW6L6DFWVSZPJXIQY",
+				credential: "hcyxASnlf91Dxla9",
+			},
+
+			// Add TURN servers here if necessary
+		];
+
+		const newPeerConnection = new RTCPeerConnection({ iceServers });
+		peerConnections.set(targetUser, newPeerConnection);
+
+		const dataChannel = newPeerConnection.createDataChannel("chat");
+		dataChannels.set(targetUser, dataChannel);
+
+		// Data Channel Event Handlers
+		dataChannel.onopen = () => {
+			console.log(`Data channel is open with ${targetUser}`);
+		};
+
+		dataChannel.onclose = () => {
+			console.log(`Data channel closed with ${targetUser}`);
+		};
+
+		dataChannel.onerror = (error) => {
+			console.error(`Data channel error with ${targetUser}:`, error);
+		};
+
+		dataChannel.onmessage = (event) => {
+			const data = JSON.parse(event.data);
+
+			console.log("data", data);
+
+			if (data.type === "file") {
+				// If the message is a file, populate the message with a description
+				const messageText = `File received: ${data.fileName}`;
+
+				setMessageHistory((prev) => ({
+					...prev,
+					[targetUser]: [
+						...(prev[targetUser] || []),
+						{
+							sender: targetUser,
+							message: messageText,
+							type: "file",
+							fileName: data.fileName,
+							downloadUrl: data.downloadUrl,
+						},
+					],
+				}));
+
+				storeMessageHistory({
+					sender: targetUser,
+					...data,
+					keys: targetUser,
+				});
+
+				storeLeastMessageHandler({
+					keys: targetUser,
+					message: messageText, // Updated message text for file
+					type: "file",
+					fullName: data.fullName,
+					downloadUrl: data.downloadUrl,
+					publicKey: data.publicKey,
+				});
+			} else {
+				// Handle normal text messages
+				setMessageHistory((prev) => ({
+					...prev,
+					[targetUser]: [
+						...(prev[targetUser] || []),
+						{ sender: targetUser, message: data.message, type: data.type },
+					],
+				}));
+
+				storeMessageHistory({
+					sender: targetUser,
+					message: data.message,
+					type: data.type,
+					keys: targetUser,
+				});
+
+				storeLeastMessageHandler({
+					keys: targetUser,
+					message: data.message,
+					type: data.type,
+					fullName: data.fullName,
+					publicKey: data.publicKey,
+				});
+			}
+		};
+
+		// Peer Connection Event Handlers
+		newPeerConnection.onconnectionstatechange = () => {
+			console.log(
+				`Connection state with ${targetUser}: ${newPeerConnection.connectionState}`
+			);
+			if (newPeerConnection.connectionState === "failed") {
+				console.error(`Connection failed with ${targetUser}`);
+			} else if (newPeerConnection.connectionState === "disconnected") {
+				console.warn(`Connection disconnected with ${targetUser}`);
+			} else if (newPeerConnection.connectionState === "connected") {
+				console.log(`Connection established with ${targetUser}`);
+			}
+		};
+
+		newPeerConnection.onicecandidate = (event) => {
+			if (event.candidate) {
+				sendCandidate(event.candidate, targetUser);
+				console.log(
+					`Generated and sent ICE candidate for ${targetUser}:`,
+					event.candidate
+				);
+			} else {
+				console.log(`All ICE candidates have been sent for ${targetUser}`);
+			}
+		};
+
+		newPeerConnection.ondatachannel = (event) => {
+			const receiveChannel = event.channel;
+			dataChannels.set(targetUser, receiveChannel);
+			receiveChannel.onmessage = (event) => {
+				console.log(`Received message from ${targetUser}:`, event.data);
+				const data = JSON.parse(event.data);
+
+				setMessageHistory((prev) => ({
+					...prev,
+					[targetUser]: [
+						...(prev[targetUser] || []),
+						{ sender: targetUser, ...data },
+					],
+				}));
+				storeMessageHistory({
+					sender: targetUser,
+					...data,
+					keys: targetUser,
+				});
+				storeLeastMessageHandler({
+					keys: targetUser,
+					...data,
+				});
+			};
+		};
+
+		try {
+			const offer = await newPeerConnection.createOffer();
+			await newPeerConnection.setLocalDescription(offer);
+			console.log("Generated and set local offer:", offer);
+			sendOffer(offer, targetUser);
+		} catch (error) {
+			console.error("Error creating offer:", error);
+		}
+	};
+
+	// Handle incoming offer automatically by creating an answer
+	const handleReceivedOffer = async (message) => {
+		try {
+			const parsedMessage = JSON.parse(message.body);
+			const { offer, sender } = parsedMessage;
+			console.log(`Received offer from ${sender}:`, offer);
+
+			if (!peerConnections.has(sender)) {
+				const iceServers = [
+					{ urls: "stun:stun.l.google.com:19302" },
+					{ urls: "stun:stun.l.google.com:5349" },
+					{ urls: "stun:stun1.l.google.com:3478" },
+					{ urls: "stun:stun1.l.google.com:5349" },
+					{ urls: "stun:stun2.l.google.com:19302" },
+					{ urls: "stun:stun2.l.google.com:5349" },
+					{ urls: "stun:stun3.l.google.com:3478" },
+					{ urls: "stun:stun3.l.google.com:5349" },
+					{ urls: "stun:stun4.l.google.com:19302" },
+					{ urls: "stun:stun4.l.google.com:5349" },
+					{
+						urls: "turn:relay1.expressturn.com:3478",
+						username: "efW6L6DFWVSZPJXIQY",
+						credential: "hcyxASnlf91Dxla9",
+					},
+				];
+
+				const newPeerConnection = new RTCPeerConnection({ iceServers });
+				peerConnections.set(sender, newPeerConnection);
+
+				newPeerConnection.onicecandidate = (event) => {
+					if (event.candidate) {
+						sendCandidate(event.candidate, sender);
+						console.log(
+							`Generated and sent ICE candidate for ${sender}:`,
+							event.candidate
+						);
+					} else {
+						console.log(`All ICE candidates have been sent for ${sender}`);
+					}
+				};
+
+				newPeerConnection.ondatachannel = (event) => {
+					const receiveChannel = event.channel;
+					dataChannels.set(sender, receiveChannel);
+					//? Receive data channel messages here
+					receiveChannel.onmessage = (event) => {
+						const data = JSON.parse(event.data);
+						console.log(`Received message from ${sender}:`, data);
+						setMessageHistory((prev) => ({
+							...prev,
+							[sender]: [...(prev[sender] || []), { sender, ...data }],
+						}));
+						storeMessageHistory({
+							sender,
+							...data,
+							keys: sender,
+						});
+						storeLeastMessageHandler({
+							keys: sender,
+							message: data.message,
+							type: data.type,
+							fullName: data.fullName,
+							publicKey: data.publicKey,
+						});
+					};
+				};
+
+				newPeerConnection.onconnectionstatechange = () => {
+					console.log(
+						`Connection state with ${sender}: ${newPeerConnection.connectionState}`
+					);
+					if (newPeerConnection.connectionState === "failed") {
+						console.error(`Connection failed with ${sender}`);
+					} else if (newPeerConnection.connectionState === "disconnected") {
+						console.warn(`Connection disconnected with ${sender}`);
+					} else if (newPeerConnection.connectionState === "connected") {
+						console.log(`Connection established with ${sender}`);
+					}
+				};
+			}
+
+			const peerConnection = peerConnections.get(sender);
+			await peerConnection.setRemoteDescription(
+				new RTCSessionDescription(offer)
+			);
+			console.log(`Set remote description with offer from ${sender}`);
+
+			// Apply queued ICE candidates after remote description is set
+			await applyQueuedIceCandidates(sender);
+
+			const answer = await peerConnection.createAnswer();
+			await peerConnection.setLocalDescription(answer);
+			console.log(`Created and set local answer for ${sender}:`, answer);
+			sendAnswer(answer, sender);
+		} catch (error) {
+			console.error("Error in handleReceivedOffer:", error);
+		}
+	};
+
+	const handleReceivedAnswer = async (message) => {
+		try {
+			const { answer, sender } = JSON.parse(message.body);
+			console.log("Received answer from:", sender);
+
+			if (peerConnections.has(sender)) {
+				const peerConnection = peerConnections.get(sender);
+				await peerConnection.setRemoteDescription(
+					new RTCSessionDescription(answer)
+				);
+				console.log("Set remote description with answer from:", sender);
+
+				// Apply queued ICE candidates after remote description is set
+				await applyQueuedIceCandidates(sender);
+			} else {
+				console.error("No peer connection found for sender:", sender);
+			}
+		} catch (error) {
+			console.error("Error in handleReceivedAnswer:", error);
+		}
+	};
+
+	// Function to handle received ICE candidates
+	const handleReceivedCandidate = async (message) => {
+		try {
+			const data = JSON.parse(message.body);
+			console.log("handleReceivedCandidate ~ data:", data);
+			const { candidate, sender } = data;
+
+			// Fallback to usernameFragment if sender is empty
+			const actualSender = sender || (candidate && candidate.usernameFragment);
+
+			if (!actualSender) {
+				console.error("Cannot determine sender for ICE candidate.");
+				return;
+			}
+
+			console.log(`Received ICE candidate from ${actualSender}:`, candidate);
+
+			if (peerConnections.has(actualSender)) {
+				const peerConnection = peerConnections.get(actualSender);
+				const iceCandidate = new RTCIceCandidate({
+					candidate: candidate.candidate,
+					sdpMLineIndex: candidate.sdpMLineIndex,
+					sdpMid: candidate.sdpMid,
+					usernameFragment: candidate.usernameFragment,
+				});
+
+				if (
+					peerConnection.remoteDescription &&
+					peerConnection.remoteDescription.type
+				) {
+					await peerConnection.addIceCandidate(iceCandidate);
+					console.log("Added ICE candidate:", iceCandidate);
+				} else {
+					if (!iceCandidatesQueue.has(actualSender)) {
+						iceCandidatesQueue.set(actualSender, []);
+					}
+					iceCandidatesQueue.get(actualSender).push(iceCandidate);
+					console.log("Queued ICE candidate:", iceCandidate);
+				}
+			} else {
+				console.error("No peer connection found for sender:", actualSender);
+			}
+		} catch (error) {
+			console.error("Error adding received ICE candidate:", error);
+		}
+	};
+
+	// Apply queued ICE candidates after setting the remote description
+	const applyQueuedIceCandidates = async (sender) => {
+		if (iceCandidatesQueue.has(sender) && peerConnections.has(sender)) {
+			const peerConnection = peerConnections.get(sender);
+			const candidates = iceCandidatesQueue.get(sender);
+			while (candidates.length > 0) {
+				const candidate = candidates.shift();
+				try {
+					await peerConnection.addIceCandidate(candidate);
+					console.log("Added queued ICE candidate:", candidate);
+				} catch (error) {
+					console.error("Error adding queued ICE candidate:", error);
+				}
+			}
+			iceCandidatesQueue.delete(sender);
+		}
+	};
+
+	const sendOffer = (offer, targetUser) => {
+		if (!targetUser) {
+			console.error("Target user is not defined");
+			return;
+		}
+		clientRef.current.publish({
+			destination: "/app/offer",
+			body: JSON.stringify({ offer, targetUser, sender: usernameRef.current }),
+		});
+		console.log("Sent offer to:", targetUser);
+	};
+
+	const sendAnswer = (answer, targetUser) => {
+		if (!targetUser) {
+			console.error("Target user is not defined");
+			return;
+		}
+		clientRef.current.publish({
+			destination: "/app/answer",
+			body: JSON.stringify({ answer, targetUser, sender: usernameRef.current }),
+		});
+		console.log(`Sent answer to ${targetUser}:`, answer);
+	};
+
+	const sendCandidate = (candidate, targetUser) => {
+		if (!targetUser) {
+			console.error("Target user is not defined");
+			return;
+		}
+		console.log("Sending candidate with sender:", usernameRef.current); // Logging
+		clientRef.current.publish({
+			destination: "/app/candidate",
+			body: JSON.stringify({
+				candidate,
+				targetUser,
+				sender: usernameRef.current,
+			}),
+		});
+		console.log(`Sent ICE candidate to ${targetUser}:`, candidate);
+	};
+
+	// Send message over the data channel
+	const sendMessage = (message, type) => {
+		if (userSelected.email && dataChannels.has(userSelected.email)) {
+			const dataChannel = dataChannels.get(userSelected.email);
+			console.log(`Sent message to ${userSelected.email}:`, message);
+			console.log(
+				"sendMessage ~ dataChannel.readyState:",
+				JSON.stringify({
+					message: message,
+					type: type,
+					fullName: fullName.current,
+					publicKey: publicKey.current,
+				})
+			);
+
+			if (dataChannel.readyState === "open") {
+				dataChannel.send(
+					JSON.stringify({
+						message: message,
+						type: type,
+						fullName: fullName.current,
+						publicKey: publicKey.current,
+					})
+				);
+				setMessageHistory((prev) => ({
+					...prev,
+					[userSelected.email]: [
+						...(prev[userSelected.email] || []),
+						{ sender: usernameRef.current, message: message, type: type },
+					],
+				}));
+				storeMessageHistory({
+					sender: usernameRef.current,
+					message,
+					type,
+					keys: userSelected.email,
+				});
+				storeLeastMessageHandler({
+					keys: userSelected.email,
+					message,
+					type,
+					fullName: userSelected.fullName,
+					publicKey: userSelected.publicKey,
+				});
+			} else if (dataChannel.readyState === "connecting") {
+				console.log("Data channel is still connecting. Please wait.");
+				setTimeout(sendMessage, 1000); // Retry after 1 second
+			} else {
+				console.error(
+					"Data channel is not open or does not exist. Cannot send message."
+				);
+			}
+		} else {
+			console.error("No data channel found for the target user.");
+		}
+	};
+
+	const sendFile = async (file) => {
+		if (userSelected.email && dataChannels.has(userSelected.email)) {
+			const dataChannel = dataChannels.get(userSelected.email);
+
+			// Prepare the file data
+			const formData = new FormData();
+			formData.append("file", file);
+
+			const token = getToken();
+			if (!token) {
+				console.error("No authorization token found.");
+				return;
+			}
+
+			try {
+				// Upload file to the backend
+				const response = await axiosClient.post("/file/upload", formData, {
+					headers: {
+						"Content-Type": "multipart/form-data",
+						Authorization: `Bearer ${token}`,
+					},
+				});
+
+				// Extract the file details
+				const fileName = response; // Adjust according to API response
+				console.log(
+					`File uploaded: ${fileName}, URL: /file/download/${fileName}`
+				);
+				const downloadUrl = `/file/download/${fileName}`;
+
+				if (dataChannel.readyState === "open") {
+					const message = {
+						type: "file",
+						message: `File sent: ${fileName}`, // Adding message for file
+						fileName,
+						downloadUrl,
+						fullName: fullName.current,
+						publicKey: publicKey.current,
+					};
+
+					// Send metadata via the data channel
+					dataChannel.send(JSON.stringify(message));
+
+					// Update the UI
+					setMessageHistory((prev) => ({
+						...prev,
+						[userSelected.email]: [
+							...(prev[userSelected.email] || []),
+							{ sender: usernameRef.current, ...message },
+						],
+					}));
+
+					console.log("sent messsage", message);
+
+					storeMessageHistory({
+						sender: usernameRef.current,
+						...message,
+						keys: userSelected.email,
+					});
+
+					storeLeastMessageHandler({
+						keys: userSelected.email,
+						message: message.message, // Use descriptive message here
+						type: "file",
+						fullName: userSelected.fullName,
+						publicKey: userSelected.publicKey,
+					});
+				} else {
+					console.log("Data channel is not ready. Retrying...");
+					setTimeout(() => sendFile(file), 1000);
+				}
+			} catch (error) {
+				console.error("File upload error:", error.message);
+			}
+		} else {
+			console.error("No data channel available for the target user.");
+		}
+	};
+
+	const sendImage = async (imageFile) => {
+		if (userSelected.email && dataChannels.has(userSelected.email)) {
+			const dataChannel = dataChannels.get(userSelected.email);
+
+			// Prepare the image data
+			const formData = new FormData();
+			formData.append("file", imageFile);
+
+			const token = getToken();
+			if (!token) {
+				console.error("No authorization token found.");
+				return;
+			}
+
+			try {
+				// Upload image to the backend
+				const response = await axiosClient.post("/file/upload", formData, {
+					headers: {
+						"Content-Type": "multipart/form-data",
+						Authorization: `Bearer ${token}`,
+					},
+				});
+
+				// Extract the image details
+				const imageName = response; // Adjust according to API response
+				console.log(
+					`Image uploaded: ${imageName}, URL: /file/download/${imageName}`
+				);
+				const downloadUrl = `/file/download/${imageName}`;
+
+				if (dataChannel.readyState === "open") {
+					const message = {
+						type: "image",
+						message: `Image sent: ${imageName}`, // Adding message for image
+						imageName,
+						downloadUrl,
+						fullName: fullName.current,
+						publicKey: publicKey.current,
+					};
+
+					// Send metadata via the data channel
+					dataChannel.send(JSON.stringify(message));
+
+					// Update the UI
+					setMessageHistory((prev) => ({
+						...prev,
+						[userSelected.email]: [
+							...(prev[userSelected.email] || []),
+							{ sender: usernameRef.current, ...message },
+						],
+					}));
+
+					console.log("Sent image message:", message);
+
+					storeMessageHistory({
+						sender: usernameRef.current,
+						...message,
+						keys: userSelected.email,
+					});
+
+					storeLeastMessageHandler({
+						keys: userSelected.email,
+						message: message.message, // Use descriptive message here
+						type: "image",
+						fullName: userSelected.fullName,
+						publicKey: userSelected.publicKey,
+					});
+				} else {
+					console.log("Data channel is not ready. Retrying...");
+					setTimeout(() => sendImage(imageFile), 1000);
+				}
+			} catch (error) {
+				console.error("Image upload error:", error.message);
+			}
+		} else {
+			console.error("No data channel available for the target user.");
+		}
+	};
+
+	const startCall = async (targetUser) => {
+		console.log("startCall invoked with:", targetUser);
+		// Ensure targetUser is not an event object
+		if (targetUser && typeof targetUser !== "string") {
+			console.error("Invalid targetUser:", targetUser);
+			return;
+		}
+
+		// Avoid accidentally passing the event object
+		const callNotificationPayload = {
+			targetUser,
+			caller: usernameRef.current,
+		};
+
+		// Notify the target user about the call
+		clientRef.current.publish({
+			destination: `/app/call-notification`,
+			body: JSON.stringify(callNotificationPayload), // Ensure only serializable data
+		});
+		console.log(`Call notification sent to ${targetUser}`);
+	};
+
+	const openCallTab = (username, targetUser) => {
+		console.log("Opening call tab...");
+		const url = `/chatp2p_fe/#/call?username=${encodeURIComponent(
+			username
+		)}&targetUser=${encodeURIComponent(targetUser)}`;
+		console.log("Opening URL:", url);
+
+		// Open a new tab or window
+		const newWindow = window.open(url, "_blank", "width=800,height=600");
+		if (!newWindow) {
+			console.error("Failed to open call tab. Check popup blockers.");
+		} else {
+			console.log("Call tab opened successfully.");
+		}
+	};
+
+	const hanedleCallAccepted = (message) => {
+		try {
+			const { targetUser } = JSON.parse(message.body);
+			console.log("message.body", message.body);
+
+			openCallTab(usernameRef.current, targetUser);
+		} catch (error) {
+			console.error("Error handling call acceptejd:", error);
+		}
+	};
+
+	const handleCallNotification = (message) => {
+		try {
+			const { caller, message: notification = "Incoming call" } = JSON.parse(
+				message.body
+			);
+			console.log(`Incoming call notification from ${caller}: ${notification}`);
+
+			const accept = window.confirm(`${caller} is calling you. Accept?`);
+			if (accept) {
+				console.log("Call accepted. Starting chat with:", caller);
+				openCallTab(usernameRef.current, caller);
+				clientRef.current.publish({
+					destination: `/app/call-accepted`,
+					body: JSON.stringify({
+						targetUser: caller,
+						sender: usernameRef.current,
+					}),
+				});
+			}
+		} catch (error) {
+			console.error("Error handling call notification:", error);
+		}
+	};
+
+	return (
+		<>
+			{/* Left Sidebar */}
+			<ListUser
+				latestMessage={latestMessage}
+				userSelected={userSelected}
+				setUserSelected={setUserSelected}
+				activeUsers={activeUsers}
+				startChat={startChat}
+			/>
+			{/* Main Chat Area */}
+			<div className="flex flex-col bg-zinc-900 overflow-auto">
+				{/* Chat Header */}
+				<ChatHeader userSelected={userSelected} startCall={startCall} />
+				{/* Chat Messages */}
+				<ChatArea
+					messagesHistory={messageHistory[userSelected.email]}
+					username={usernameRef.current}
+				/>
+
+				{/* Message Input */}
+				<MessageInput
+					sendMessage={sendMessage}
+					sendFile={sendFile}
+					sendImage={sendImage}
+				/>
+			</div>
+		</>
+	);
+}

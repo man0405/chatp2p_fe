@@ -73,13 +73,6 @@ export default function SideBar({
 	const [activeSection, setActiveSection] = React.useState("General");
 	return (
 		<div className="w-16 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-4">
-			<Button
-				variant="ghost"
-				size="icon"
-				className="mb-4 text-zinc-400 hover:text-white"
-			>
-				<MessagesSquare className="w-6 h-6" />
-			</Button>
 			<div className="flex-1 flex flex-col gap-2">
 				{sidebarItems.map((item, index) => (
 					<Button
