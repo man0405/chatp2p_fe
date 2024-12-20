@@ -1,9 +1,8 @@
-import SideBar from "@/components/Layout/SideBar/SideBar";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
-import { Archive, BookUser, MessageCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import ListUser from "@/components/Chat/ListUser";
 import { MessageInput } from "@/components/Chat/MessageInput";
 import { ChatArea } from "@/components/Chat/ChatArea";
@@ -18,21 +17,16 @@ import {
 } from "@/services/message.service";
 import { debounce } from "@/utils/debounce";
 import { getStoredKeys } from "@/utils/rsa";
-
-const sidebarItems = [
-	{ icon: MessageCircle, label: "Messages", hasNotification: true },
-	{ icon: BookUser, label: "Friend" },
-	{ icon: Archive, label: "Archive" },
-];
+import { usersActiveActions } from "@/lib/redux/activeUser";
 
 export default function Component() {
-	const [selectedSidebarItem, setSelectedSidebarItem] = useState(1);
-
 	// Handler socket and signaling
-	const [activeUsers, setActiveUsers] = useState([]);
+	// const [activeUsers, setActiveUsers] = useState([]);
 	const [messageHistory, setMessageHistory] = useState({});
 	const [userSelected, setUserSelected] = useState({});
 	const [latestMessage, setLatestMessage] = useState([]);
+	const usersActive = useSelector((state) => state.usersActive.users);
+	console.log("Component ~ usersActive:", usersActive);
 
 	const usernameRef = useRef("");
 	const fullName = useRef(localStorage.getItem("fullName"));
@@ -42,6 +36,8 @@ export default function Component() {
 	const peerConnections = useRef(new Map()).current;
 	const dataChannels = useRef(new Map()).current;
 	const iceCandidatesQueue = useRef(new Map()).current;
+
+	const dispatch = useDispatch();
 
 	const disconnect = () => {
 		if (clientRef.current) {
@@ -63,13 +59,12 @@ export default function Component() {
 			}
 		};
 		getKeys();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
 
-	useEffect(() => {
 		getLatestMessages().then((messages) => {
 			setLatestMessage(messages);
 		});
+
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	// Debounce the create / update latest message
@@ -144,7 +139,9 @@ export default function Component() {
 
 				client.subscribe("/user/queue/active-friends", function (message) {
 					const activeFriends = JSON.parse(message.body);
-					setActiveUsers([...activeFriends]); // it doesnt set data here
+					console.log("activeFriends:", activeFriends);
+					// setActiveUsers([activeFriends]); // it doesnt set data here
+					dispatch(usersActiveActions.setActiveUser(activeFriends));
 
 					// Update the UI with the active friends
 					// updateActiveFriendsUI(activeFriends);
@@ -874,7 +871,7 @@ export default function Component() {
 				latestMessage={latestMessage}
 				userSelected={userSelected}
 				setUserSelected={setUserSelected}
-				activeUsers={activeUsers}
+				activeUsers={usersActive}
 				startChat={startChat}
 			/>
 			{/* Main Chat Area */}
