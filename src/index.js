@@ -7,12 +7,12 @@ import {
 	RouterProvider,
 } from "react-router-dom";
 import StoreProvider from "./lib/redux/StoreProvider";
-
 import App from "./App";
 
 import LoginPage from "./page/Login";
 import RegisterPage from "./page/Register";
 import Call from "./page/Call";
+import { Toaster } from "./components/ui/toaster";
 
 const router = createHashRouter([
 	{
@@ -37,5 +37,6 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
 	<StoreProvider>
 		<RouterProvider router={router} />
+		<Toaster></Toaster>
 	</StoreProvider>
 );
