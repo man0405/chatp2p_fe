@@ -5,26 +5,43 @@ import { getToken } from "@/services/token.service";
 import axiosClient from "@/lib/axios/axiosClient";
 import FilePreview from "./FilePreview";
 import ImagePreview from "./ImagePreview";
-import IconLoader from "./IconLoader";
 
 export function ChatArea({ messagesHistory, username }) {
-  console.log("ChatArea ~ username:", username);
-  const scrollBottom = useRef();
+  const scrollBotton = useRef();
 
   useEffect(() => {
-    if (scrollBottom.current) {
-      scrollToBottom(scrollBottom.current, true);
+    if (scrollBotton.current) {
+      scrollToBottom(scrollBotton.current, true);
     }
   }, [messagesHistory]);
 
-  const handleFileClick = (msg) => {
-    // Logic for handling file click/download
-    console.log("Downloading file:", msg);
+  // Function to handle file link click
+  const handleFileClick = async (msg) => {
+    try {
+      console.log(`Fetching file for: ${msg.fileName}`);
+      const response = await axiosClient.get(msg.downloadUrl, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
+        responseType: "blob", // To handle file data as a blob
+      });
+
+      const downloadUrl = URL.createObjectURL(response);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = msg.fileName || "downloaded_file";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Error fetching file:", error.message);
+    }
   };
 
   return (
     <ScrollArea className="flex-1 p-4">
-      <div className="space-y-4" ref={scrollBottom}>
+      <div className="space-y-4" ref={scrollBotton}>
         {messagesHistory?.map((msg, index) => (
           <div
             key={index}
@@ -33,27 +50,25 @@ export function ChatArea({ messagesHistory, username }) {
             }`}
           >
             <div
-              className={`${
+              className={`$${
                 msg.sender === username
                   ? "bg-blue-600 text-white"
                   : "bg-zinc-800 text-zinc-200"
               } rounded-2xl px-4 py-2 max-w-[80%]`}
             >
-              {msg.type === "file" && (
+              {msg.type === "file" ? (
                 <FilePreview
                   fileName={msg.fileName}
-                  onDownload={() => handleFileClick(msg)}
+                  onDownload={handleFileClick.bind(null, msg)}
                 />
+              ) : (
+                <p>{msg.message}</p>
               )}
-              {msg.type === "image" && (
+              {msg.type === "image" ? (
                 <ImagePreview downloadUrl={msg.downloadUrl} />
+              ) : (
+                <p>{msg.message}</p>
               )}
-              {msg.type === "icons" && (
-                <IconLoader name={msg.message} className="w-6 h-6" />
-              )}
-              {msg.type !== "file" &&
-                msg.type !== "image" &&
-                msg.type !== "icons" && <p>{msg.message}</p>}
             </div>
           </div>
         ))}
