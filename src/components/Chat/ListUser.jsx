@@ -62,7 +62,15 @@ export default function ListUser({
 								/>
 								<AvatarFallback>{user.fullName?.slice(0, 2)}</AvatarFallback>
 							</Avatar>
-							<div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-zinc-900" />
+							<div
+								className={`absolute bottom-0 right-0 w-3 h-3 ${
+									activeUsers.some(
+										(activeUser) => activeUser.email === user.keys
+									)
+										? "bg-green-500"
+										: "bg-gray-500"
+								} rounded-full border-2 border-zinc-900`}
+							/>
 						</div>
 						<div className="flex-1 min-w-0">
 							<div className="flex justify-between items-baseline">

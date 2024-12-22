@@ -2,13 +2,33 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Camera, Smile, Send, ThumbsUp } from "lucide-react";
+import { useToast } from "@/hooks/use-toast"; // Add this import
 
-export function MessageInput({ sendMessage, sendFile, sendImage }) {
+export function MessageInput({
+	sendMessage,
+	sendFile,
+	sendImage,
+	usersActive,
+	userSelected,
+}) {
+	const { toast } = useToast();
 	const [message, setMessage] = useState("");
 	const fileInputRef = useRef(null);
 	const imageInputRef = useRef(null); // Reference for the image input
 
+	const isUserOffline = !usersActive.some(
+		(user) => user.email === userSelected.email
+	);
+
 	const handleSend = () => {
+		if (isUserOffline) {
+			toast({
+				variant: "destructive",
+				title: "User is offline",
+				description: "Cannot send messages while user is offline",
+			});
+			return;
+		}
 		if (message.trim()) {
 			sendMessage(message, "text");
 			setMessage("");
@@ -18,10 +38,26 @@ export function MessageInput({ sendMessage, sendFile, sendImage }) {
 	};
 
 	const handleFileClick = () => {
+		if (isUserOffline) {
+			toast({
+				variant: "destructive",
+				title: "User is offline",
+				description: "Cannot send files while user is offline",
+			});
+			return;
+		}
 		fileInputRef.current.click();
 	};
 
 	const handleImageClick = () => {
+		if (isUserOffline) {
+			toast({
+				variant: "destructive",
+				title: "User is offline",
+				description: "Cannot send images while user is offline",
+			});
+			return;
+		}
 		imageInputRef.current.click();
 	};
 
@@ -60,6 +96,7 @@ export function MessageInput({ sendMessage, sendFile, sendImage }) {
 					size="icon"
 					className="text-zinc-400 hover:text-white"
 					onClick={handleFileClick}
+					disabled={isUserOffline}
 				>
 					<Plus className="w-5 h-5" />
 				</Button>
@@ -76,6 +113,7 @@ export function MessageInput({ sendMessage, sendFile, sendImage }) {
 					size="icon"
 					className="text-zinc-400 hover:text-white"
 					onClick={handleImageClick}
+					disabled={isUserOffline}
 				>
 					<Camera className="w-5 h-5" />
 				</Button>
@@ -93,13 +131,17 @@ export function MessageInput({ sendMessage, sendFile, sendImage }) {
 						value={message}
 						onKeyPress={handleKeyPress}
 						onChange={(e) => setMessage(e.target.value)}
-						placeholder="Type a message..."
+						placeholder={
+							isUserOffline ? "User is offline" : "Type a message..."
+						}
 						className="border-0 bg-transparent focus-visible:ring-0 text-zinc-200 placeholder:text-zinc-400"
+						disabled={isUserOffline}
 					/>
 					<Button
 						variant="ghost"
 						size="icon"
 						className="text-zinc-400 hover:text-white"
+						disabled={isUserOffline}
 					>
 						<Smile className="w-5 h-5" />
 					</Button>
@@ -111,6 +153,7 @@ export function MessageInput({ sendMessage, sendFile, sendImage }) {
 					size="icon"
 					className="text-zinc-400 hover:text-white"
 					onClick={handleSend}
+					disabled={isUserOffline}
 				>
 					{message ? (
 						<Send className="w-5 h-5" />
