@@ -1,9 +1,8 @@
-import SideBar from "@/components/Layout/SideBar/SideBar";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
-import { Archive, BookUser, MessageCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import ListUser from "@/components/Chat/ListUser";
 import { MessageInput } from "@/components/Chat/MessageInput";
 import { ChatArea } from "@/components/Chat/ChatArea";
@@ -18,18 +17,16 @@ import {
 } from "@/services/message.service";
 import { debounce } from "@/utils/debounce";
 import { getStoredKeys } from "@/utils/rsa";
-
-const sidebarItems = [
-	{ icon: MessageCircle, label: "Messages", hasNotification: true },
-	{ icon: BookUser, label: "Friend" },
-	{ icon: Archive, label: "Archive" },
-];
+import { usersActiveActions } from "@/lib/redux/activeUser";
+import { Button } from "@/components/ui/button";
 
 export default function Component({ userSelected, setUserSelected }) {
 	// Handler socket and signaling
-	const [activeUsers, setActiveUsers] = useState([]);
+	// const [activeUsers, setActiveUsers] = useState([]);
 	const [messageHistory, setMessageHistory] = useState({});
 	const [latestMessage, setLatestMessage] = useState([]);
+	const usersActive = useSelector((state) => state.usersActive.users);
+	console.log("Component ~ usersActive:", usersActive);
 
 	const usernameRef = useRef("");
 	const fullName = useRef(localStorage.getItem("fullName"));
@@ -40,15 +37,38 @@ export default function Component({ userSelected, setUserSelected }) {
 	const dataChannels = useRef(new Map()).current;
 	const iceCandidatesQueue = useRef(new Map()).current;
 
+	const dispatch = useDispatch();
+
 	const disconnect = () => {
 		if (clientRef.current) {
-			clientRef.current.publish({
-				destination: "/app/exit",
-				body: usernameRef.current,
-			});
-			console.log("WebSocket connection closed");
+			try {
+				clientRef.current.publish({
+					destination: "/app/exit",
+					body: usernameRef.current,
+				});
+				console.log("WebSocket connection closed");
+			} catch (error) {
+				console.error("Error while disconnecting:", error);
+			} finally {
+				clientRef.current.deactivate();
+				clientRef.current = null;
+			}
 		}
 	};
+
+	useEffect(() => {
+		const handleBeforeUnload = () => {
+			disconnect();
+		};
+
+		// Attach the event listener
+		window.addEventListener("beforeunload", handleBeforeUnload);
+
+		return () => {
+			// Clean up the event listener on component unmount
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, []);
 
 	// Connect to the signaling server
 	useEffect(() => {
@@ -60,13 +80,12 @@ export default function Component({ userSelected, setUserSelected }) {
 			}
 		};
 		getKeys();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
 
-	useEffect(() => {
 		getLatestMessages().then((messages) => {
 			setLatestMessage(messages);
 		});
+
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	// Debounce the create / update latest message
@@ -141,7 +160,9 @@ export default function Component({ userSelected, setUserSelected }) {
 
 				client.subscribe("/user/queue/active-friends", function (message) {
 					const activeFriends = JSON.parse(message.body);
-					setActiveUsers([...activeFriends]); // it doesnt set data here
+					console.log("activeFriends:", activeFriends);
+					// setActiveUsers([activeFriends]); // it doesnt set data here
+					dispatch(usersActiveActions.setActiveUser(activeFriends));
 
 					// Update the UI with the active friends
 					// updateActiveFriendsUI(activeFriends);
@@ -871,25 +892,37 @@ export default function Component({ userSelected, setUserSelected }) {
 				latestMessage={latestMessage}
 				userSelected={userSelected}
 				setUserSelected={setUserSelected}
-				activeUsers={activeUsers}
+				activeUsers={usersActive}
 				startChat={startChat}
 			/>
 			{/* Main Chat Area */}
 			<div className="flex flex-col bg-zinc-900 overflow-auto">
 				{/* Chat Header */}
-				<ChatHeader userSelected={userSelected} startCall={startCall} />
-				{/* Chat Messages */}
-				<ChatArea
-					messagesHistory={messageHistory[userSelected.email]}
-					username={usernameRef.current}
-				/>
-
-				{/* Message Input */}
-				<MessageInput
-					sendMessage={sendMessage}
-					sendFile={sendFile}
-					sendImage={sendImage}
-				/>
+				{Object.keys(userSelected).length > 0 ? (
+					<>
+						<ChatHeader
+							userSelected={userSelected}
+							startCall={startCall}
+							activeUsers={usersActive}
+						/>
+						{/* Chat Messages */}
+						<ChatArea
+							messagesHistory={messageHistory[userSelected.email]}
+							username={usernameRef.current}
+						/>
+						<MessageInput
+							usersActive={usersActive}
+							userSelected={userSelected}
+							sendMessage={sendMessage}
+							sendFile={sendFile}
+							sendImage={sendImage}
+						/>
+					</>
+				) : (
+					<div className="flex-1 flex items-center justify-center bg-zinc-900 text-zinc-400">
+						Select a conversation to start chatting
+					</div>
+				)}
 			</div>
 		</>
 	);

@@ -3,7 +3,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Info, Phone, Search, Video } from "lucide-react";
 
-export default function ChatHeader({ userSelected, startCall }) {
+export default function ChatHeader({ userSelected, startCall, activeUsers }) {
+	const isUserOnline = activeUsers.find(
+		(user) => user.email === userSelected.email
+	);
+
 	return (
 		<div className="flex items-center justify-between p-2 border-b border-zinc-800">
 			<div className="flex items-center gap-3">
@@ -17,7 +21,9 @@ export default function ChatHeader({ userSelected, startCall }) {
 					<span className="font-semibold text-zinc-200">
 						{userSelected.fullName}
 					</span>
-					<span className="text-xs text-zinc-400">Online</span>
+					<span className="text-xs text-zinc-400">
+						{isUserOnline ? "Online" : "Offline"}
+					</span>
 				</div>
 			</div>
 			<div className="flex items-center gap-2">
@@ -25,6 +31,7 @@ export default function ChatHeader({ userSelected, startCall }) {
 					variant="ghost"
 					size="icon"
 					className="text-zinc-400 hover:text-white"
+					disabled={!isUserOnline}
 				>
 					<Phone className="w-5 h-5" />
 				</Button>
@@ -33,6 +40,7 @@ export default function ChatHeader({ userSelected, startCall }) {
 					size="icon"
 					className="text-zinc-400 hover:text-white"
 					onClick={() => startCall(userSelected.email)}
+					disabled={!isUserOnline}
 				>
 					<Video className="w-5 h-5" />
 				</Button>
