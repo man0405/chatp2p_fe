@@ -12,16 +12,16 @@ export default function ImagePreview({ downloadUrl }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch image when the component mounts
-    fetchImage();
-
-    // Cleanup to revoke the object URL
+    console.log("ImagePreview downloadUrl:", downloadUrl);
+    if (downloadUrl) {
+      fetchImage();
+    }
     return () => {
       if (imageUrl) {
         URL.revokeObjectURL(imageUrl);
       }
     };
-  }, []); // Empty dependency array ensures this runs once after mounting
+  }, [downloadUrl]);
 
   const fetchImage = async () => {
     if (imageUrl) return;
@@ -40,7 +40,10 @@ export default function ImagePreview({ downloadUrl }) {
       setImageUrl(url);
     } catch (err) {
       console.error("Error fetching image:", err);
-      setError("Failed to load the image. Please try again.");
+      setError(
+        err.response?.data?.message ||
+          "Failed to load the image. Please check your connection and try again."
+      );
     } finally {
       setIsLoading(false);
     }

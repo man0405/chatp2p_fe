@@ -261,6 +261,41 @@ export default function Component() {
           downloadUrl: data.downloadUrl,
           publicKey: data.publicKey,
         });
+      } else if (data.type === "image") {
+        // Handle image messages
+        const messageText = `Image received: ${data.fileName}`;
+
+        setMessageHistory((prev) => ({
+          ...prev,
+          [targetUser]: [
+            ...(prev[targetUser] || []),
+            {
+              sender: targetUser,
+              message: messageText,
+              type: "image",
+              fileName: data.fileName,
+              downloadUrl: data.downloadUrl,
+            },
+          ],
+        }));
+
+        storeMessageHistory({
+          sender: targetUser,
+          message: messageText,
+          type: "image",
+          fileName: data.fileName,
+          downloadUrl: data.downloadUrl,
+          keys: targetUser,
+        });
+
+        storeLeastMessageHandler({
+          keys: targetUser,
+          message: messageText, // Updated message text for image
+          type: "image",
+          fullName: data.fullName,
+          downloadUrl: data.downloadUrl,
+          publicKey: data.publicKey,
+        });
       } else {
         // Handle normal text messages
         setMessageHistory((prev) => ({
