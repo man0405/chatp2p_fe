@@ -20,11 +20,10 @@ import { getStoredKeys } from "@/utils/rsa";
 import { usersActiveActions } from "@/lib/redux/activeUser";
 import { Button } from "@/components/ui/button";
 
-export default function Component() {
+export default function Component({ userSelected, setUserSelected }) {
 	// Handler socket and signaling
 	// const [activeUsers, setActiveUsers] = useState([]);
 	const [messageHistory, setMessageHistory] = useState({});
-	const [userSelected, setUserSelected] = useState({});
 	const [latestMessage, setLatestMessage] = useState([]);
 	const usersActive = useSelector((state) => state.usersActive.users);
 	console.log("Component ~ usersActive:", usersActive);
