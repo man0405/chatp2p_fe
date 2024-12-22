@@ -1,12 +1,21 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { login } from "@/api/authentication/login";
 import { setToken } from "@/services/token.service";
-import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import axiosClient from "@/lib/axios/axiosClient";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function LoginPage() {
 	const navigate = useNavigate();
@@ -15,11 +24,17 @@ export default function LoginPage() {
 		email: "",
 		password: "",
 	});
+
 	const [errors, setErrors] = useState({
 		email: "",
 		password: "",
 	});
 	const [isLoading, setIsLoading] = useState(false);
+	const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] =
+		useState(false);
+	const [resetToken, setResetToken] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [forgotPasswordError, setForgotPasswordError] = useState("");
 
 	const updateFormData = (field, value) => {
 		setFormData({
@@ -31,7 +46,6 @@ export default function LoginPage() {
 	const validateForm = () => {
 		let isValid = true;
 		const newErrors = { ...errors };
-		console.log("validateForm ~ newErrors:", newErrors);
 		if (!formData.email) {
 			newErrors.email = "Email is required";
 			isValid = false;
@@ -61,8 +75,7 @@ export default function LoginPage() {
 				setToken(response.data.token);
 				localStorage.setItem("fullName", response.data.fullName);
 				localStorage.setItem("username", formData.email);
-				console.log("handleSubmit ~ response:", response);
-				navigate("/test");
+				navigate("/");
 				return;
 			} else {
 				setErrors({
@@ -76,6 +89,73 @@ export default function LoginPage() {
 				email: "An error occurred",
 				password: "An error occurred",
 			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const handleForgotPassword = async (email) => {
+		setIsLoading(true);
+		setForgotPasswordError("");
+		const formData = new FormData();
+		formData.append("email", email);
+		console.log("email: " + email);
+		try {
+			const response = await axiosClient.post(
+				"/auth/forgot-password",
+				formData,
+				{
+					headers: {
+						"Content-Type": "text",
+					},
+				}
+			);
+			if (response.success) {
+				setIsForgotPasswordModalOpen(true);
+			} else {
+				setForgotPasswordError("Email not found");
+			}
+		} catch (error) {
+			console.error(error);
+			setForgotPasswordError(error.response?.message || "Email not found");
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const handleResetPasswordSubmit = async () => {
+		setIsLoading(true);
+		setForgotPasswordError("");
+		console.log(formData.email, " ", resetToken, " ", newPassword);
+		try {
+			if (!resetToken || !newPassword) {
+				throw new Error("Reset token and new password are required.");
+			}
+
+			const response = await axiosClient.post("/auth/reset-password", {
+				email: formData.email,
+				resetToken,
+				newPassword,
+			});
+
+			if (response.success) {
+				// Successfully reset the password
+				setIsForgotPasswordModalOpen(false);
+				setResetToken("");
+				setNewPassword("");
+				console.log("Password reset successfully");
+				// Optionally redirect or show a success message
+				navigate("/auth/login");
+			} else {
+				throw new Error(response.data?.message || "Failed to reset password.");
+			}
+		} catch (error) {
+			console.error(error);
+			setForgotPasswordError(
+				error.response?.data?.message ||
+					error.message ||
+					"An unexpected error occurred. Please try again."
+			);
 		} finally {
 			setIsLoading(false);
 		}
@@ -137,9 +217,13 @@ export default function LoginPage() {
 						<div className="space-y-2">
 							<div className="flex items-center justify-between">
 								<Label htmlFor="password">Password</Label>
-								<Link to="#" className="text-sm font-medium underline">
+								<Button
+									variant="link"
+									className="text-sm font-medium underline p-0 h-auto"
+									onClick={() => handleForgotPassword(formData.email)}
+								>
 									Forgot password?
-								</Link>
+								</Button>
 							</div>
 							<Input
 								id="password"
@@ -157,7 +241,7 @@ export default function LoginPage() {
 							className="w-full"
 							disabled={isLoading}
 						>
-							{isLoading ? <Loader2 className="animate-spin" /> : "Sign In "}
+							{isLoading ? <Loader2 className="animate-spin" /> : "Sign In"}
 						</Button>
 					</form>
 					<p className="text-center text-sm text-gray-500 dark:text-gray-400">
@@ -168,6 +252,62 @@ export default function LoginPage() {
 					</p>
 				</div>
 			</div>
+
+			<Dialog
+				open={isForgotPasswordModalOpen}
+				onOpenChange={setIsForgotPasswordModalOpen}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Reset Password</DialogTitle>
+						<DialogDescription>
+							Enter the reset token sent to your email and your new password.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-4">
+						<div className="space-y-2">
+							<Label htmlFor="resetToken">Reset Token</Label>
+							<Input
+								id="resetToken"
+								value={resetToken}
+								onChange={(e) => setResetToken(e.target.value)}
+								placeholder="Enter reset token"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="newPassword">New Password</Label>
+							<Input
+								id="newPassword"
+								type="password"
+								value={newPassword}
+								onChange={(e) => setNewPassword(e.target.value)}
+								placeholder="Enter new password"
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button onClick={handleResetPasswordSubmit} disabled={isLoading}>
+							{isLoading ? (
+								<Loader2 className="animate-spin" />
+							) : (
+								"Reset Password"
+							)}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{forgotPasswordError && (
+				<div className="fixed inset-0 flex items-center justify-center z-50">
+					<div className="bg-white p-6 rounded-lg shadow-lg">
+						<h2 className="text-xl font-bold mb-4">Error</h2>
+						<p>{forgotPasswordError}</p>
+						<Button onClick={() => setForgotPasswordError("")} className="mt-4">
+							Close
+						</Button>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

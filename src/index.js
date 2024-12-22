@@ -2,13 +2,14 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import {
-	createBrowserRouter,
+	// createBrowserRouter,
 	createHashRouter,
 	RouterProvider,
 } from "react-router-dom";
+import StoreProvider from "./lib/redux/StoreProvider";
 
 import App from "./App";
-import Test from "./page/test";
+
 import LoginPage from "./page/Login";
 import RegisterPage from "./page/Register";
 import Call from "./page/Call";
@@ -18,10 +19,7 @@ const router = createHashRouter([
 		path: "/",
 		element: <App />,
 	},
-	{
-		path: "/test",
-		element: <Test />,
-	},
+
 	{
 		path: "/auth/login",
 		element: <LoginPage />,
@@ -36,4 +34,8 @@ const router = createHashRouter([
 	},
 ]);
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<RouterProvider router={router} />);
+root.render(
+	<StoreProvider>
+		<RouterProvider router={router} />
+	</StoreProvider>
+);
