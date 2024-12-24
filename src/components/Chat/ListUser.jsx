@@ -12,6 +12,7 @@ export default function ListUser({
 	userSelected,
 	setUserSelected,
 	startChat,
+	storeLeastMessageHandler,
 }) {
 	return (
 		<div className="bg-zinc-900 border-r border-zinc-800 h-screen overflow-hidden flex flex-col ">
@@ -53,6 +54,17 @@ export default function ListUser({
 								publicKey: user.publicKey,
 							});
 							startChat(user.keys);
+							// Update read status when user is selected
+							if (!user.read) {
+								storeLeastMessageHandler({
+									keys: user.keys,
+									message: user.message,
+									type: user.type,
+									fullName: user.fullName,
+									publicKey: user.publicKey,
+									read: true,
+								});
+							}
 						}}
 					>
 						<div className="relative">
@@ -74,7 +86,12 @@ export default function ListUser({
 						</div>
 						<div className="flex-1 min-w-0">
 							<div className="flex justify-between items-baseline">
-								<p className="font-medium text-zinc-200">{user.fullName}</p>
+								<div className="relative flex items-center">
+									<p className="font-medium text-zinc-200">{user.fullName}</p>
+									{!user.read && (
+										<div className="absolute -right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full" />
+									)}
+								</div>
 								<span className="text-xs text-zinc-400">
 									{new Date(user.timestamp).toLocaleString("en-US", {
 										month: "short",
