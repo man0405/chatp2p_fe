@@ -4,22 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import axiosClient from "@/lib/axios/axiosClient"; // Import axiosClient
+import { getToken } from "@/services/token.service";
 
 export default function AddFriendModal({ isOpen, setIsOpen }) {
   const [gmail, setGmail] = useState(""); // State to store email input
   const [friendSuggestions, setFriendSuggestions] = useState([]); // State for friend suggestions
   const [isUndefined, setUndefined] = useState(false);
-  const [isTriggered, setTriggered] = useState(false); // State to check if the button is clicked
-  const jwtToken =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ2YW5tYW4xNjA1MDRAZ21haWwuY29tIiwiaWF0IjoxNzMyMDY5MjEzLCJleHAiOjE3MzIwNzI4MTN9.IwxRgRrH1ffh8QBL5-7gp6BYWLfVexlfjd7xqSm3c3E"; // Replace this with your actual JWT token or fetch it dynamically
-
+  const [isTriggered, setTriggered] = useState(false); //
   // Function to fetch friend data
   const fetchFriendSuggestions = async () => {
     setUndefined(false); // Reset isUndefined state
     try {
       const response = await axiosClient.get(`/friends/find?gmail=${gmail}`, {
         headers: {
-          Authorization: `Bearer ${jwtToken}`, // Add JWT token to Authorization header
+          Authorization: `Bearer ${getToken()}`, // Add JWT token to Authorization header
         },
       });
       // Map the returned JSON into the format required for friendSuggestions
@@ -44,7 +42,7 @@ export default function AddFriendModal({ isOpen, setIsOpen }) {
         null, // Request body (JSON object)
         {
           headers: {
-            Authorization: `Bearer ${jwtToken}`, // Pass the JWT token in the header
+            Authorization: `Bearer ${getToken()}`, // Pass the JWT token in the header
             "Content-Type": "application/json", // Ensure JSON is specified as Content-Type
           },
         }
@@ -67,7 +65,7 @@ export default function AddFriendModal({ isOpen, setIsOpen }) {
         null, // Request body (JSON object)
         {
           headers: {
-            Authorization: `Bearer ${jwtToken}`, // Pass the JWT token in the header
+            Authorization: `Bearer ${getToken()}`, // Pass the JWT token in the header
             "Content-Type": "application/json", // Ensure JSON is specified as Content-Type
           },
         }

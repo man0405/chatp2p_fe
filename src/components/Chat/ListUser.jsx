@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ActiveUser from "./ActiveUser";
 import { decrypt } from "@/utils/rsa";
+import AddFriendModal from "./AddFriendModal";
 
 export default function ListUser({
   latestMessage,
@@ -18,6 +19,7 @@ export default function ListUser({
   storeLeastMessageHandler,
 }) {
   const [decryptMessage, setDecryptMessage] = React.useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   console.log("decryptMessage:", decryptMessage, username);
 
   const decryptHandler = useCallback(
@@ -67,6 +69,7 @@ export default function ListUser({
   }, [decryptHandler, latestMessage, username]);
   return (
     <div className="bg-zinc-900 border-r border-zinc-800 h-screen overflow-hidden flex flex-col ">
+      <AddFriendModal isOpen={isModalOpen} setIsOpen={setIsModalOpen} />
       <div className="p-4 border-zinc-800">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold text-white">Chats</h1>
@@ -74,6 +77,7 @@ export default function ListUser({
             variant="ghost"
             size="icon"
             className="text-zinc-400 hover:text-white"
+            onClick={() => setIsModalOpen(true)}
           >
             <UserPlus className="w-5 h-5" />
           </Button>
