@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { UserPlus } from "lucide-react";
 import {
   Archive,
   Bell,
@@ -509,7 +510,7 @@ const WebRTCComponent = () => {
                 className="text-zinc-400 hover:text-white"
                 onClick={() => setIsModalOpen(true)}
               >
-                <MessageCircle className="w-5 h-5" />
+                <UserPlus className="w-5 h-5" />
               </Button>
             </div>
             <div className="relative">
