@@ -303,7 +303,7 @@ export default function Component({ userSelected, setUserSelected }) {
 				});
 			} else if (data.type === "image") {
 				// Handle image messages
-				const messageText = `Image received: ${data.fileName}`;
+				const messageText = `Image received`;
 
 				setMessageHistory((prev) => ({
 					...prev,
