@@ -7,9 +7,9 @@ import SockJS from "sockjs-client";
 export default function Call() {
   const [username, setUsername] = useState("");
   const [targetUser, setTargetUser] = useState("");
-  const [isCameraOn, setIsCameraOn] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const [isCallStarted, setIsCallStarted] = useState(false);
   const videoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -153,8 +153,8 @@ export default function Call() {
   const startCall = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: isCameraOn,
-        audio: isMicOn,
+        video: true,
+        audio: true,
       });
 
       localStreamRef.current = stream;
@@ -202,8 +202,8 @@ export default function Call() {
       );
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: isCameraOn,
-        audio: isMicOn,
+        video: true,
+        audio: true,
       });
       localStreamRef.current = stream;
       setIsLocalStreamReady(true);
