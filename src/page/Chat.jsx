@@ -16,9 +16,9 @@ import {
 	getLatestMessages,
 } from "@/services/message.service";
 import { debounce } from "@/utils/debounce";
-import { getStoredKeys } from "@/utils/rsa";
+import { generateAndStoreKeys, getStoredKeys } from "@/utils/rsa";
 import { usersActiveActions } from "@/lib/redux/activeUser";
-import { Button } from "@/components/ui/button";
+import { encrypt, decrypt } from "@/utils/rsa";
 
 export default function Component({ userSelected, setUserSelected }) {
 	// Handler socket and signaling
@@ -31,6 +31,7 @@ export default function Component({ userSelected, setUserSelected }) {
 	const usernameRef = useRef("");
 	const fullName = useRef(localStorage.getItem("fullName"));
 	const publicKey = useRef("");
+	const privateKey = useRef("");
 
 	const clientRef = useRef(null);
 	const peerConnections = useRef(new Map()).current;
@@ -77,7 +78,23 @@ export default function Component({ userSelected, setUserSelected }) {
 			const keys = await getStoredKeys();
 			if (keys) {
 				publicKey.current = keys.publicKey;
+				privateKey.current = keys.privateKey;
 			}
+
+			const privateKeyA =
+				"-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCwM7cuhXGgQ4yhqpFfJvhxYnk6E/Zq3NJiqHIxIoQvUzz6bW0Zc1kIMiDME+dORbSRjYZG12gzkDlhTlGyv9g1EvMP7Sm78/LH5EIhWj5smQF7jtnY8gdvOne5Y61UxU+VTaVzt26UVuL5uzQlqyMx4UV51dMMu+ECX2sZbDTJdX78I5jrwbExEodtDBh7uq6K0XKyoRWoDHdJrVoci+ud3ndKupF53iqSKp/3KhkHqYk0cSNC/avc5W8Xe7rENV3ySi+Vv5rKhN9TnvYZbmRLXoKntkjHFyM+n/8CyO6lpVBLxfM5llh+AXI8ld9Wk4H5NbTuy1L9u0hq7rKEw9jjAgMBAAECggEAUmZc6+yLzp7ITXIuuYjH9n5OotJjEmZiHLEZddDmcBtFEPfLZXOD10lZ/RXxvbDrWIYOnWJu4G455z9xBV6iBW/vKyuFsNfMWZ5tLpu9RZvoDZgoWEQXJfT5uEDc9h+vr+q3zP2jQMvBKXhaUqNNui3XB7rvD61s9Gca9rCbnvoEfYjONkJbl+xiIZYEDJLaqWJacfleN6JNwePgO0wX9wMEtDTcLlhBmGvY1xOdTVyrxOVhP9x6FwmzYwMmNAEdytLGbGGG2TgdPqW0ZFjrp+MtcZ4b0AnuJz+HyilbzYe2C5hT/Bn9PNx+1h4e4M/zbX4Ax9G+sfTrMfJXRF1KQQKBgQDhrwaOYojKSA10rR3m/mW96icuYjE9Tr+j233hGbDHBiucSIKzoVcJqbraaSHGzL/iG32a4wzfQYFmzChB5ba27PW/Q41SCfI7xoGJqytbaEamC1HmOMh8n5IiNDPzTnGawY8mC3u/D/v66GaNPT8V5bqL1FIeavEQTY6c6Hk3NQKBgQDH3xP9HMNpQ26R7nAvMiot75u79WRIeE0/pityEYVhpKMwFMgznsFmIZeFYUpfc/abY+rcdiUbBzY8+ntsHOnSbEy+YLKO07Fj8iCJ8w/qNVzHY0udcVMko+KAk6JdC6mOOF5/fpN4siqn4zZLoEF5y9WnWc0DoLnN8SitgroatwKBgCTcQWXgEhd3zTrRS6D+y/9Izz10LDanNgW9Q8IQQB9Bkr3j2fUc1OpvHmWt5iZiKrTzaIBztRaBzHDNx4V7z2vxJ/IlRl+v4DCDK4Ugv+QeE+vqzWWcwKIaLfQIMrP6i/OKyaadGYkLQ0ynyJgo+LTK4L0V4JO3Q8g14qUeEy5BAoGASQnXFx7EthnDNSbJ7iVJzqGJ6oTBEc6MhB7oL3YBpO3yCGb/xgVUrUrHQSGNeRY6XwyDTe8KnjbjdiMeqSJju9aBsOxLM/BeGaToiSC+hxra/a3mevFnrbMJ2WyZ36CcZHFq7vJFV8zb06AvPjGg265GNDKXvaSlYYGoGMf11D8CgYEAlA3oIvbVHoj7zPuOFQ0Ev0zd8YC8nNDRFNggK2hMJfdkwToIY48xuUVh0GTiWamEABXcgItBUd9R42irFuyhXJCspJZ+R3EdpRpeuCrQoHZ6s51B7Uc6ALv3KVE1myFGwJIbsOBm6Y/kcI+7+F8FyJ+/8Ofl85jfQI+a/Vnl73c=\n-----END PRIVATE KEY-----";
+			const publicKeyA =
+				"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsDO3LoVxoEOMoaqRXyb4cWJ5OhP2atzSYqhyMSKEL1M8+m1tGXNZCDIgzBPnTkW0kY2GRtdoM5A5YU5Rsr/YNRLzD+0pu/Pyx+RCIVo+bJkBe47Z2PIHbzp3uWOtVMVPlU2lc7dulFbi+bs0JasjMeFFedXTDLvhAl9rGWw0yXV+/COY68GxMRKHbQwYe7quitFysqEVqAx3Sa1aHIvrnd53SrqRed4qkiqf9yoZB6mJNHEjQv2r3OVvF3u6xDVd8kovlb+ayoTfU572GW5kS16Cp7ZIxxcjPp//AsjupaVQS8XzOZZYfgFyPJXfVpOB+TW07stS/btIau6yhMPY4wIDAQAB\n-----END PUBLIC KEY-----";
+
+			const a =
+				"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsDO3LoVxoEOMoaqRXyb4cWJ5OhP2atzSYqhyMSKEL1M8+m1tGXNZCDIgzBPnTkW0kY2GRtdoM5A5YU5Rsr/YNRLzD+0pu/Pyx+RCIVo+bJkBe47Z2PIHbzp3uWOtVMVPlU2lc7dulFbi+bs0JasjMeFFedXTDLvhAl9rGWw0yXV+/COY68GxMRKHbQwYe7quitFysqEVqAx3Sa1aHIvrnd53SrqRed4qkiqf9yoZB6mJNHEjQv2r3OVvF3u6xDVd8kovlb+ayoTfU572GW5kS16Cp7ZIxxcjPp//AsjupaVQS8XzOZZYfgFyPJXfVpOB+TW07stS/btIau6yhMPY4wIDAQAB\\n-----END PUBLIC KEY-----";
+
+			const net = await generateAndStoreKeys();
+			console.log("Keys", privateKeyA, publicKeyA);
+			const dataEncrypt = await encrypt("Hello", publicKeyA);
+			console.log("Data Encrypt", dataEncrypt);
+			const dataDecrypt = await decrypt(dataEncrypt, privateKeyA);
+			console.log("Data Decrypt", dataDecrypt);
 		};
 		getKeys();
 
@@ -89,8 +106,9 @@ export default function Component({ userSelected, setUserSelected }) {
 	}, []);
 
 	// Debounce the create / update latest message
-	const storeLeastMessageHandler = ({
+	const storeLeastMessageHandler = async ({
 		keys,
+		sender,
 		message,
 		type,
 		fullName,
@@ -105,12 +123,21 @@ export default function Component({ userSelected, setUserSelected }) {
 			fullName
 		);
 		debounce(
-			storeLatestMessage({ keys, message, type, fullName, publicKey, read }),
+			storeLatestMessage({
+				keys,
+				message,
+				sender,
+				type,
+				fullName,
+				publicKey,
+				read,
+			}),
 			1000
 		);
 		setLatestMessage((prev) => {
 			const newMessage = {
 				keys,
+				sender,
 				message,
 				type,
 				fullName,
@@ -246,7 +273,7 @@ export default function Component({ userSelected, setUserSelected }) {
 			console.error(`Data channel error with ${targetUser}:`, error);
 		};
 
-		dataChannel.onmessage = (event) => {
+		dataChannel.onmessage = async (event) => {
 			const data = JSON.parse(event.data);
 
 			console.log("data", data);
@@ -277,6 +304,7 @@ export default function Component({ userSelected, setUserSelected }) {
 
 				storeLeastMessageHandler({
 					keys: targetUser,
+					send: targetUser,
 					message: messageText, // Updated message text for file
 					type: "file",
 					fullName: data.fullName,
@@ -312,6 +340,7 @@ export default function Component({ userSelected, setUserSelected }) {
 
 				storeLeastMessageHandler({
 					keys: targetUser,
+					sender: targetUser,
 					message: messageText, // Updated message text for image
 					type: "image",
 					fullName: data.fullName,
@@ -337,6 +366,7 @@ export default function Component({ userSelected, setUserSelected }) {
 
 				storeLeastMessageHandler({
 					keys: targetUser,
+					sender: targetUser,
 					message: data.message,
 					type: data.type,
 					fullName: data.fullName,
@@ -374,7 +404,7 @@ export default function Component({ userSelected, setUserSelected }) {
 		newPeerConnection.ondatachannel = (event) => {
 			const receiveChannel = event.channel;
 			dataChannels.set(targetUser, receiveChannel);
-			receiveChannel.onmessage = (event) => {
+			receiveChannel.onmessage = async (event) => {
 				console.log(`Received message from ${targetUser}:`, event.data);
 				const data = JSON.parse(event.data);
 
@@ -388,11 +418,14 @@ export default function Component({ userSelected, setUserSelected }) {
 				storeMessageHistory({
 					sender: targetUser,
 					...data,
+					message: data.message,
 					keys: targetUser,
 				});
 				storeLeastMessageHandler({
 					keys: targetUser,
+					sender: targetUser,
 					...data,
+					message: data.message,
 				});
 			};
 		};
@@ -466,6 +499,7 @@ export default function Component({ userSelected, setUserSelected }) {
 						});
 						storeLeastMessageHandler({
 							keys: sender,
+							sender,
 							message: data.message,
 							type: data.type,
 							fullName: data.fullName,
@@ -635,14 +669,14 @@ export default function Component({ userSelected, setUserSelected }) {
 	};
 
 	// Send message over the data channel
-	const sendMessage = (message, type) => {
+	const sendMessage = async (message, type) => {
 		if (userSelected.email && dataChannels.has(userSelected.email)) {
 			const dataChannel = dataChannels.get(userSelected.email);
 			console.log(`Sent message to ${userSelected.email}:`, message);
 			console.log(
-				"sendMessage ~ dataChannel.readyState:",
+				(await encrypt(message, publicKey.current)).toString(),
 				JSON.stringify({
-					message: message,
+					message: (await encrypt(message, publicKey.current)).toString(),
 					type: type,
 					fullName: fullName.current,
 					publicKey: publicKey.current,
@@ -652,7 +686,7 @@ export default function Component({ userSelected, setUserSelected }) {
 			if (dataChannel.readyState === "open") {
 				dataChannel.send(
 					JSON.stringify({
-						message: message,
+						message: await encrypt(message, publicKey.current),
 						type: type,
 						fullName: fullName.current,
 						publicKey: publicKey.current,
@@ -673,6 +707,7 @@ export default function Component({ userSelected, setUserSelected }) {
 				});
 				storeLeastMessageHandler({
 					keys: userSelected.email,
+					sender: usernameRef.current,
 					message,
 					type,
 					fullName: userSelected.fullName,
@@ -727,7 +762,7 @@ export default function Component({ userSelected, setUserSelected }) {
 						type: "file",
 						message: `File sent: ${fileName}`, // Adding message for file
 						fileName,
-						downloadUrl,
+						downloadUrl: await encrypt(downloadUrl, publicKey.current),
 						fullName: fullName.current,
 						publicKey: publicKey.current,
 					};
@@ -753,6 +788,7 @@ export default function Component({ userSelected, setUserSelected }) {
 					});
 
 					storeLeastMessageHandler({
+						sender: usernameRef.current,
 						keys: userSelected.email,
 						message: message.message, // Use descriptive message here
 						type: "file",
@@ -807,7 +843,7 @@ export default function Component({ userSelected, setUserSelected }) {
 						type: "image",
 						message: `Image sent: ${imageName}`, // Adding message for image
 						imageName,
-						downloadUrl,
+						downloadUrl: await encrypt(downloadUrl, publicKey.current),
 						fullName: fullName.current,
 						publicKey: publicKey.current,
 					};
@@ -820,7 +856,11 @@ export default function Component({ userSelected, setUserSelected }) {
 						...prev,
 						[userSelected.email]: [
 							...(prev[userSelected.email] || []),
-							{ sender: usernameRef.current, ...message },
+							{
+								sender: usernameRef.current,
+								...message,
+								downloadUrl: downloadUrl,
+							},
 						],
 					}));
 
@@ -829,11 +869,13 @@ export default function Component({ userSelected, setUserSelected }) {
 					storeMessageHistory({
 						sender: usernameRef.current,
 						...message,
+						downloadUrl: downloadUrl,
 						keys: userSelected.email,
 					});
 
 					storeLeastMessageHandler({
 						keys: userSelected.email,
+						sender: usernameRef.current,
 						message: message.message, // Use descriptive message here
 						type: "image",
 						fullName: userSelected.fullName,
@@ -932,6 +974,8 @@ export default function Component({ userSelected, setUserSelected }) {
 				latestMessage={latestMessage}
 				userSelected={userSelected}
 				setUserSelected={setUserSelected}
+				username={usernameRef.current}
+				privateKey={privateKey.current}
 				activeUsers={usersActive}
 				storeLeastMessageHandler={storeLeastMessageHandler}
 				startChat={startChat}
@@ -950,6 +994,7 @@ export default function Component({ userSelected, setUserSelected }) {
 						<ChatArea
 							messagesHistory={messageHistory[userSelected.email]}
 							username={usernameRef.current}
+							privateKey={privateKey.current}
 						/>
 						<MessageInput
 							usersActive={usersActive}
