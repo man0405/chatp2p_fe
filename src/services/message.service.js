@@ -105,6 +105,7 @@ export const getPageMessageHistory = async (keys, limit = 50, offset = 0) => {
 
 export const storeLatestMessage = async ({
 	keys,
+	sender,
 	fullName,
 	message,
 	type,
@@ -122,6 +123,7 @@ export const storeLatestMessage = async ({
 
 		const newMessage = {
 			keys, // This must match the keyPath defined in initializeDB
+			sender,
 			fullName,
 			message,
 			type,

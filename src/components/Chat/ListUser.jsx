@@ -1,19 +1,70 @@
-import React from "react";
+import React, { useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ActiveUser from "./ActiveUser";
+import { decrypt } from "@/utils/rsa";
 
 export default function ListUser({
 	latestMessage,
 	activeUsers,
 	userSelected,
 	setUserSelected,
+	privateKey,
+	username,
 	startChat,
 	storeLeastMessageHandler,
 }) {
+	const [decryptMessage, setDecryptMessage] = React.useState([]);
+	console.log("decryptMessage:", decryptMessage, username);
+
+	const decryptHandler = useCallback(
+		async (msg) => {
+			try {
+				if (!msg) return { content: "" };
+				const decryptedMessage = await decrypt(msg, privateKey);
+				return decryptedMessage;
+			} catch (error) {
+				console.error("Decryption error:", error);
+				return { content: "Error decrypting message" };
+			}
+		},
+		[privateKey]
+	);
+	useEffect(() => {
+		const decryptMessages = async () => {
+			const newDecryptedContent = [];
+			for (const msg of latestMessage || []) {
+				try {
+					const msgCopy = { ...msg };
+					if (msg.sender !== username) {
+						let decryptedMessage;
+						if (msg.type === "image") {
+							decryptedMessage = await decryptHandler(msg.downloadUrl);
+							msgCopy.downloadUrl = decryptedMessage?.content || "";
+						} else if (msg.type === "icons" || msg.type === "text") {
+							decryptedMessage = await decryptHandler(msg.message);
+							msgCopy.message = decryptedMessage?.content || "";
+						} else if (msg.type === "file") {
+							msgCopy.downloadUrl = msg.downloadUrl;
+						}
+					}
+					newDecryptedContent.push(msgCopy);
+				} catch (error) {
+					console.error("Error processing message:", error);
+					newDecryptedContent.push({
+						...msg,
+						message: "Error decrypting message",
+					});
+				}
+			}
+			setDecryptMessage(newDecryptedContent);
+		};
+
+		decryptMessages();
+	}, [decryptHandler, latestMessage, username]);
 	return (
 		<div className="bg-zinc-900 border-r border-zinc-800 h-screen overflow-hidden flex flex-col ">
 			<div className="p-4 border-zinc-800">
@@ -41,7 +92,7 @@ export default function ListUser({
 				startChat={startChat}
 			/>
 			<ScrollArea className=" p-4">
-				{latestMessage.map((user, index) => (
+				{decryptMessage.map((user, index) => (
 					<div
 						key={index}
 						className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-900 cursor-pointer relative ${
@@ -58,7 +109,11 @@ export default function ListUser({
 							if (!user.read) {
 								storeLeastMessageHandler({
 									keys: user.keys,
-									message: user.message,
+									sender: user.sender,
+									message: latestMessage
+										.filter((msg) => msg.keys === user.keys)
+										.map((msg) => msg.message)
+										.join(" "),
 									type: user.type,
 									fullName: user.fullName,
 									publicKey: user.publicKey,

@@ -12,12 +12,19 @@ function arrayBufferToBase64(buffer) {
 
 // Helper function to convert Base64 to ArrayBuffer
 function base64ToArrayBuffer(base64) {
-	const binary = window.atob(base64);
-	const bytes = new Uint8Array(binary.length);
-	Array.from(binary).forEach((char, i) => {
-		bytes[i] = char.charCodeAt(0);
-	});
-	return bytes.buffer;
+	try {
+		// Remove any whitespace
+		base64 = base64.replace(/\s/g, "");
+		const binary = window.atob(base64);
+		const bytes = new Uint8Array(binary.length);
+		for (let i = 0; i < binary.length; i++) {
+			bytes[i] = binary.charCodeAt(i);
+		}
+		return bytes.buffer;
+	} catch (error) {
+		console.error("Base64 conversion error:", error);
+		throw new Error("Invalid base64 string");
+	}
 }
 
 // Function to convert CryptoKey to PEM format
@@ -69,6 +76,7 @@ async function importPEMKey(pem, type) {
 			["encrypt"]
 		);
 	} else if (type === "private") {
+		console.log("Importing private key...");
 		return await window.crypto.subtle.importKey(
 			"pkcs8",
 			arrayBuffer,
@@ -86,7 +94,7 @@ async function importPEMKey(pem, type) {
 
 export async function generateAndStoreKeys() {
 	try {
-		const db = await initDB("RSAKeys");
+		// const db = await initDB("RSAKeys");
 
 		// Generate key pair using Web Crypto API
 		const keyPair = await window.crypto.subtle.generateKey(
@@ -104,16 +112,16 @@ export async function generateAndStoreKeys() {
 		const publicKeyPEM = await exportKeyToPEM(keyPair.publicKey, "public");
 		const privateKeyPEM = await exportKeyToPEM(keyPair.privateKey, "private");
 
-		const tx = db.transaction("keys", "readwrite");
-		const store = tx.objectStore("keys");
+		// const tx = db.transaction("keys", "readwrite");
+		// const store = tx.objectStore("keys");
 
 		// Store the PEM strings
-		await Promise.all([
-			store.put(publicKeyPEM, "publicKey"),
-			store.put(privateKeyPEM, "privateKey"),
-		]);
+		// await Promise.all([
+		// 	store.put(publicKeyPEM, "publicKey"),
+		// 	store.put(privateKeyPEM, "privateKey"),
+		// ]);
 
-		await tx.done;
+		// await tx.done;
 		return { publicKey: publicKeyPEM, privateKey: privateKeyPEM };
 	} catch (error) {
 		console.error("Error generating and storing keys:", error);
@@ -157,27 +165,72 @@ export async function getStoredKeys() {
 }
 
 export async function encrypt(data, publicKey) {
+	const publicKeyObj = await importPEMKey(publicKey, "public");
 	const encoder = new TextEncoder();
 	const encodedData = encoder.encode(data);
 	const encrypted = await window.crypto.subtle.encrypt(
 		{
 			name: "RSA-OAEP",
 		},
-		publicKey,
+		publicKeyObj,
 		encodedData
 	);
 	return arrayBufferToBase64(encrypted);
 }
 
 export async function decrypt(encryptedData, privateKey) {
-	const buffer = base64ToArrayBuffer(encryptedData);
-	const decrypted = await window.crypto.subtle.decrypt(
-		{
-			name: "RSA-OAEP",
-		},
-		privateKey,
-		buffer
-	);
-	const decoder = new TextDecoder();
-	return decoder.decode(decrypted);
+	try {
+		if (!encryptedData || !privateKey) {
+			throw new Error("Missing required parameters");
+		}
+
+		console.log("Encrypted data length:", encryptedData.length);
+
+		// Clean the encrypted data
+		encryptedData = encryptedData.trim();
+
+		// Validate base64 input with a more permissive regex
+		if (!/^[A-Za-z0-9+/=]+$/.test(encryptedData)) {
+			throw new Error("Invalid base64 format");
+		}
+
+		const privateKeyObj = await importPEMKey(privateKey, "private");
+		console.log("Private key imported successfully");
+
+		const buffer = base64ToArrayBuffer(encryptedData);
+		console.log("Buffer length:", buffer.byteLength);
+
+		if (buffer.byteLength === 0) {
+			throw new Error("Empty data buffer");
+		}
+
+		if (buffer.byteLength > 256) {
+			throw new Error("Data too large for RSA-OAEP decryption");
+		}
+
+		const decrypted = await window.crypto.subtle.decrypt(
+			{
+				name: "RSA-OAEP",
+			},
+			privateKeyObj,
+			buffer
+		);
+
+		const decoder = new TextDecoder();
+		const decodedText = decoder.decode(decrypted);
+
+		return {
+			content: decodedText,
+			timestamp: new Date().toISOString(),
+			type: "received",
+		};
+	} catch (error) {
+		console.error("Detailed decryption error:", {
+			message: error.message,
+			name: error.name,
+			encryptedDataLength: encryptedData?.length,
+			stack: error.stack,
+		});
+		throw new Error(`Decryption failed: ${error.name} - ${error.message}`);
+	}
 }
