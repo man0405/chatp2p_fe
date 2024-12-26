@@ -220,6 +220,16 @@ export default function Component({ userSelected, setUserSelected }) {
 		}
 
 		const iceServers = [
+			{
+				urls: "turn:170.64.151.183",
+				username: "user",
+				credential: "password",
+			},
+			{
+				urls: "turn:relay1.expressturn.com:3478",
+				username: "efW6L6DFWVSZPJXIQY",
+				credential: "hcyxASnlf91Dxla9",
+			},
 			{ urls: "stun:stun.l.google.com:19302" },
 			{ urls: "stun:stun.l.google.com:5349" },
 			{ urls: "stun:stun1.l.google.com:3478" },
@@ -230,11 +240,6 @@ export default function Component({ userSelected, setUserSelected }) {
 			{ urls: "stun:stun3.l.google.com:5349" },
 			{ urls: "stun:stun4.l.google.com:19302" },
 			{ urls: "stun:stun4.l.google.com:5349" },
-			{
-				urls: "turn:relay1.expressturn.com:3478",
-				username: "efW6L6DFWVSZPJXIQY",
-				credential: "hcyxASnlf91Dxla9",
-			},
 
 			// Add TURN servers here if necessary
 		];
@@ -434,6 +439,11 @@ export default function Component({ userSelected, setUserSelected }) {
 
 			if (!peerConnections.has(sender)) {
 				const iceServers = [
+					{
+						urls: "turn:170.64.151.183",
+						username: "user",
+						credential: "password",
+					},
 					{ urls: "stun:stun.l.google.com:19302" },
 					{ urls: "stun:stun.l.google.com:5349" },
 					{ urls: "stun:stun1.l.google.com:3478" },
@@ -444,6 +454,10 @@ export default function Component({ userSelected, setUserSelected }) {
 					{ urls: "stun:stun3.l.google.com:5349" },
 					{ urls: "stun:stun4.l.google.com:19302" },
 					{ urls: "stun:stun4.l.google.com:5349" },
+					{
+						url: "stun:stun.1und1.de:3478",
+					},
+
 					{
 						urls: "turn:relay1.expressturn.com:3478",
 						username: "efW6L6DFWVSZPJXIQY",
