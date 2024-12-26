@@ -1,7 +1,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { scrollToBottom } from "@/utils/scrollToBottom";
-
+import { getToken } from "@/services/token.service";
 import axiosClient from "@/lib/axios/axiosClient";
 import FilePreview from "./FilePreview";
 import ImagePreview from "./ImagePreview";
