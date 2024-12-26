@@ -94,7 +94,7 @@ async function importPEMKey(pem, type) {
 
 export async function generateAndStoreKeys() {
 	try {
-		// const db = await initDB("RSAKeys");
+		const db = await initDB("RSAKeys");
 
 		// Generate key pair using Web Crypto API
 		const keyPair = await window.crypto.subtle.generateKey(
@@ -112,16 +112,16 @@ export async function generateAndStoreKeys() {
 		const publicKeyPEM = await exportKeyToPEM(keyPair.publicKey, "public");
 		const privateKeyPEM = await exportKeyToPEM(keyPair.privateKey, "private");
 
-		// const tx = db.transaction("keys", "readwrite");
-		// const store = tx.objectStore("keys");
+		const tx = db.transaction("keys", "readwrite");
+		const store = tx.objectStore("keys");
 
 		// Store the PEM strings
-		// await Promise.all([
-		// 	store.put(publicKeyPEM, "publicKey"),
-		// 	store.put(privateKeyPEM, "privateKey"),
-		// ]);
+		await Promise.all([
+			store.put(publicKeyPEM, "publicKey"),
+			store.put(privateKeyPEM, "privateKey"),
+		]);
 
-		// await tx.done;
+		await tx.done;
 		return { publicKey: publicKeyPEM, privateKey: privateKeyPEM };
 	} catch (error) {
 		console.error("Error generating and storing keys:", error);
