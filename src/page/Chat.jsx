@@ -658,23 +658,14 @@ export default function Component({ userSelected, setUserSelected }) {
 		if (userSelected.email && dataChannels.has(userSelected.email)) {
 			const dataChannel = dataChannels.get(userSelected.email);
 			console.log(`Sent message to ${userSelected.email}:`, message);
-			console.log(
-				(await encrypt(message, publicKey.current)).toString(),
-				JSON.stringify({
-					message: (await encrypt(message, publicKey.current)).toString(),
-					type: type,
-					fullName: fullName.current,
-					publicKey: publicKey.current,
-				})
-			);
 
 			if (dataChannel.readyState === "open") {
 				dataChannel.send(
 					JSON.stringify({
-						message: await encrypt(message, publicKey.current),
+						message: await encrypt(message, userSelected.publicKey),
 						type: type,
 						fullName: fullName.current,
-						publicKey: publicKey.current,
+						// publicKey: publicKey.current,
 					})
 				);
 				setMessageHistory((prev) => ({
@@ -696,7 +687,7 @@ export default function Component({ userSelected, setUserSelected }) {
 					message,
 					type,
 					fullName: userSelected.fullName,
-					publicKey: userSelected.publicKey,
+					// publicKey: publicKey.current,
 					read: true,
 				});
 			} else if (dataChannel.readyState === "connecting") {
@@ -747,9 +738,9 @@ export default function Component({ userSelected, setUserSelected }) {
 						type: "file",
 						message: `File sent: ${fileName}`, // Adding message for file
 						fileName,
-						downloadUrl: await encrypt(downloadUrl, publicKey.current),
+						downloadUrl: await encrypt(downloadUrl, userSelected.publicKey),
 						fullName: fullName.current,
-						publicKey: publicKey.current,
+						// publicKey: publicKey.current,
 					};
 
 					// Send metadata via the data channel
@@ -778,7 +769,7 @@ export default function Component({ userSelected, setUserSelected }) {
 						message: message.message, // Use descriptive message here
 						type: "file",
 						fullName: userSelected.fullName,
-						publicKey: userSelected.publicKey,
+						// publicKey: userSelected.publicKey,
 						read: true,
 					});
 				} else {
@@ -828,9 +819,9 @@ export default function Component({ userSelected, setUserSelected }) {
 						type: "image",
 						message: `Image sent: ${imageName}`, // Adding message for image
 						imageName,
-						downloadUrl: await encrypt(downloadUrl, publicKey.current),
+						downloadUrl: await encrypt(downloadUrl, userSelected.publicKey),
 						fullName: fullName.current,
-						publicKey: publicKey.current,
+						// publicKey: userSelected.publicKey,
 					};
 
 					// Send metadata via the data channel
@@ -864,7 +855,7 @@ export default function Component({ userSelected, setUserSelected }) {
 						message: message.message, // Use descriptive message here
 						type: "image",
 						fullName: userSelected.fullName,
-						publicKey: userSelected.publicKey,
+						// publicKey: userSelected.publicKey,
 						read: true,
 					});
 				} else {

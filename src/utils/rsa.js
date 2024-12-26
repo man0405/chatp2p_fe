@@ -63,6 +63,7 @@ function pemToArrayBuffer(pem) {
 
 // Function to import PEM-formatted keys back into CryptoKey objects
 async function importPEMKey(pem, type) {
+	console.log("Pem pk", pem);
 	const arrayBuffer = pemToArrayBuffer(pem);
 	if (type === "public") {
 		return await window.crypto.subtle.importKey(
@@ -195,10 +196,10 @@ export async function decrypt(encryptedData, privateKey) {
 		}
 
 		const privateKeyObj = await importPEMKey(privateKey, "private");
-		console.log("Private key imported successfully");
+		console.log("Private key imported successfully", privateKeyObj);
 
 		const buffer = base64ToArrayBuffer(encryptedData);
-		console.log("Buffer length:", buffer.byteLength);
+		console.log("Buffer length:", buffer);
 
 		if (buffer.byteLength === 0) {
 			throw new Error("Empty data buffer");

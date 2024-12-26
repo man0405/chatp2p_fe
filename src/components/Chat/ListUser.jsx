@@ -102,7 +102,10 @@ export default function ListUser({
 							setUserSelected({
 								email: user.keys,
 								fullName: user.fullName,
-								publicKey: user.publicKey,
+								publicKey: activeUsers.find(
+									(activeUser) => activeUser.email === user.keys
+								)?.publicKey,
+								// publicKey: user.publicKey,
 							});
 							startChat(user.keys);
 							// Update read status when user is selected
@@ -116,7 +119,7 @@ export default function ListUser({
 										.join(" "),
 									type: user.type,
 									fullName: user.fullName,
-									publicKey: user.publicKey,
+									// publicKey: user.publicKey,
 									read: true,
 								});
 							}
