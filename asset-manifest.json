@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/chatp2p_fe/static/css/main.005db107.css",
-    "main.js": "/chatp2p_fe/static/js/main.287ae278.js",
+    "main.js": "/chatp2p_fe/static/js/main.ccf87d03.js",
     "index.html": "/chatp2p_fe/index.html",
     "main.005db107.css.map": "/chatp2p_fe/static/css/main.005db107.css.map",
-    "main.287ae278.js.map": "/chatp2p_fe/static/js/main.287ae278.js.map"
+    "main.ccf87d03.js.map": "/chatp2p_fe/static/js/main.ccf87d03.js.map"
   },
   "entrypoints": [
     "static/css/main.005db107.css",
-    "static/js/main.287ae278.js"
+    "static/js/main.ccf87d03.js"
   ]
 }
