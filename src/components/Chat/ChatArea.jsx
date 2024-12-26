@@ -23,8 +23,9 @@ export function ChatArea({ messagesHistory, username, privateKey }) {
 	const handleFileClick = async (msg) => {
 		try {
 			console.log(`Fetching file for: ${msg.fileName}`);
-			const messageDecrypt = decryptHandler(msg.downloadUrl);
-			const response = await axiosClient.get(messageDecrypt, {
+			console.log("msg.downloadUrl:", msg.downloadUrl);
+
+			const response = await axiosClient.get(msg.downloadUrl, {
 				headers: {
 					Authorization: `Bearer ${getToken()}`,
 				},
@@ -72,7 +73,8 @@ export function ChatArea({ messagesHistory, username, privateKey }) {
 							decryptedMessage = await decryptHandler(msg.message);
 							msgCopy.message = decryptedMessage?.content || "";
 						} else if (msg.type === "file") {
-							msgCopy.downloadUrl = msg.downloadUrl;
+							decryptedMessage = await decryptHandler(msg.downloadUrl);
+							msgCopy.downloadUrl = decryptedMessage?.content || "";
 						}
 					}
 					newDecryptedContent.push(msgCopy);

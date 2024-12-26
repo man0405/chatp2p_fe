@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { exportData, importData } from "@/services/indexDB.service";
-import { generateAndStoreKeys, getStoredKeys } from "@/utils/rsa";
+import { generateAndStoreKeys } from "@/utils/rsa";
 import { getToken } from "@/services/token.service";
 import axiosClient from "@/lib/axios/axiosClient";
 import { toast } from "@/hooks/use-toast";
