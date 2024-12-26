@@ -18,23 +18,28 @@ export default function Call() {
   const peerConnectionRef = useRef(null);
   const clientRef = useRef(null);
 
-  const servers = [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun.l.google.com:5349" },
-    { urls: "stun:stun1.l.google.com:3478" },
-    { urls: "stun:stun1.l.google.com:5349" },
-    { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:5349" },
-    { urls: "stun:stun3.l.google.com:3478" },
-    { urls: "stun:stun3.l.google.com:5349" },
-    { urls: "stun:stun4.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:5349" },
-    {
-      urls: "turn:relay1.expressturn.com:3478",
-      username: "efW6L6DFWVSZPJXIQY",
-      credential: "hcyxASnlf91Dxla9",
-    },
-  ];
+	const servers = [
+		{
+			urls: "turn:170.64.151.183",
+			username: "user",
+			credential: "password",
+		},
+		{
+			urls: "turn:relay1.expressturn.com:3478",
+			username: "efW6L6DFWVSZPJXIQY",
+			credential: "hcyxASnlf91Dxla9",
+		},
+		{ urls: "stun:stun.l.google.com:19302" },
+		{ urls: "stun:stun.l.google.com:5349" },
+		{ urls: "stun:stun1.l.google.com:3478" },
+		{ urls: "stun:stun1.l.google.com:5349" },
+		{ urls: "stun:stun2.l.google.com:19302" },
+		{ urls: "stun:stun2.l.google.com:5349" },
+		{ urls: "stun:stun3.l.google.com:3478" },
+		{ urls: "stun:stun3.l.google.com:5349" },
+		{ urls: "stun:stun4.l.google.com:19302" },
+		{ urls: "stun:stun4.l.google.com:5349" },
+	];
 
   useEffect(() => {
     if (isConnected) {
