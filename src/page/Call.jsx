@@ -19,16 +19,6 @@ export default function Call() {
 	const clientRef = useRef(null);
 
 	const servers = [
-		{
-			urls: "turn:170.64.151.183",
-			username: "user",
-			credential: "password",
-		},
-		{
-			urls: "turn:relay1.expressturn.com:3478",
-			username: "efW6L6DFWVSZPJXIQY",
-			credential: "hcyxASnlf91Dxla9",
-		},
 		{ urls: "stun:stun.l.google.com:19302" },
 		{ urls: "stun:stun.l.google.com:5349" },
 		{ urls: "stun:stun1.l.google.com:3478" },
@@ -39,6 +29,16 @@ export default function Call() {
 		{ urls: "stun:stun3.l.google.com:5349" },
 		{ urls: "stun:stun4.l.google.com:19302" },
 		{ urls: "stun:stun4.l.google.com:5349" },
+		{
+			urls: "turn:170.64.151.183",
+			username: "user",
+			credential: "password",
+		},
+		{
+			urls: "turn:relay1.expressturn.com:3478",
+			username: "efW6L6DFWVSZPJXIQY",
+			credential: "hcyxASnlf91Dxla9",
+		},
 	];
 
 	useEffect(() => {
